@@ -1,0 +1,141 @@
+{% extends 'music/base.html' %}
+
+{% block title %}{{ composition.name_composition }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Информация о композиции -->
+        <div class="col-md-4">
+            {% if composition.photo %}
+                <img src="{{ composition.photo.url }}" class="img-fluid rounded" alt="{{ composition.name_composition }}">
+            {% else %}
+                <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 300px;">
+                    <i class="bi bi-music-note" style="font-size: 4rem;"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <h1 class="mb-3">{{ composition.name_composition }}</h1>
+            
+            <!-- Информация об альбоме и жанре -->
+            <div class="mb-4">
+                {% if composition.album %}
+                    <p class="mb-2">
+                        <strong>Альбом:</strong> 
+                        <a href="#" class="text-decoration-none">{{ composition.album }}</a>
+                    </p>
+                {% endif %}
+                {% if composition.genre %}
+                    <p class="mb-2">
+                        <strong>Жанр:</strong> {{ composition.genre }}
+                    </p>
+                {% endif %}
+                <p class="mb-2">
+                    <strong>Длительность:</strong> 
+                    {{ composition.duration|divmod:60|first }}:{{ composition.duration|divmod:60|last|stringformat:"02d" }}
+                </p>
+            </div>
+
+            <!-- Аудиоплеер -->
+            <div class="mb-4">
+                <audio controls class="w-100">
+                    <source src="{{ composition.reference_on_file.url }}" type="audio/mpeg">
+                    Ваш браузер не поддерживает аудио элемент.
+                </audio>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="mb-4">
+                {% if user.is_authenticated %}
+                    <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addToPlaylistModal">
+                        Добавить в плейлист
+                    </button>
+                    <button class="btn btn-outline-primary me-2">
+                        <i class="bi bi-heart"></i> В избранное
+                    </button>
+                {% endif %}
+            </div>
+
+            <!-- Оценка -->
+            {% if user.is_authenticated %}
+                <div class="mb-4">
+                    <h4>Ваша оценка</h4>
+                    <form method="post" action="{% url 'music:rate_composition' composition.id %}" class="rating">
+                        {% csrf_token %}
+                        <div class="btn-group" role="group">
+                            {% for i in "12345" %}
+                                <input type="radio" class="btn-check" name="rating" id="rating{{ i }}" value="{{ i }}" 
+                                       {% if user_rating.rating == i|add:"0" %}checked{% endif %}>
+                                <label class="btn btn-outline-warning" for="rating{{ i }}">{{ i }}</label>
+                            {% endfor %}
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+
+            <!-- Текст песни -->
+            {% if composition.lyrics %}
+                <div class="mb-4">
+                    <h4>Текст песни</h4>
+                    <pre class="lyrics">{{ composition.lyrics }}</pre>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Отзывы -->
+    <section class="mt-5">
+        <h3>Отзывы</h3>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'music:add_feedback' composition.id %}" class="mb-4">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <textarea class="form-control" name="feedback_text" rows="3" placeholder="Напишите ваш отзыв..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Отправить отзыв</button>
+            </form>
+        {% endif %}
+
+        <div class="feedback-list">
+            {% for feedback in composition.feedback_set.all %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">{{ feedback.user.username }}</h6>
+                        <p class="card-text">{{ feedback.feedback_text }}</p>
+                        <small class="text-muted">{{ feedback.date }}</small>
+                    </div>
+                </div>
+            {% empty %}
+                <p>Пока нет отзывов. Будьте первым!</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<!-- Модальное окно для добавления в плейлист -->
+<div class="modal fade" id="addToPlaylistModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить в плейлист</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'music:add_to_playlist' composition.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <select class="form-select" name="playlist_id">
+                            <option value="">Выберите плейлист</option>
+                            {% for playlist in user.playlist_set.all %}
+                                <option value="{{ playlist.id }}">{{ playlist.name_playlist }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

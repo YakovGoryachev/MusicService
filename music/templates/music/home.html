@@ -1,0 +1,94 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Главная - Музыкальный сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Последние композиции -->
+    <section class="mb-5">
+        <h2 class="mb-4">Новые композиции</h2>
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for composition in latest_compositions %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if composition.photo %}
+                        <img src="{{ composition.photo.url }}" class="card-img-top" alt="{{ composition.name_composition }}">
+                    {% else %}
+                        <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="bi bi-music-note" style="font-size: 2rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ composition.name_composition }}</h5>
+                        <p class="card-text">
+                            {% if composition.album %}
+                                <small class="text-muted">Альбом: {{ composition.album }}</small><br>
+                            {% endif %}
+                            <small class="text-muted">Жанр: {{ composition.genre|default:"Не указан" }}</small>
+                        </p>
+                        <a href="{% url 'music:composition_detail' composition.id %}" class="btn btn-primary">Слушать</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="text-center">Нет доступных композиций.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Популярные альбомы -->
+    <section class="mb-5">
+        <h2 class="mb-4">Популярные альбомы</h2>
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for album in popular_albums %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if album.photo %}
+                        <img src="{{ album.photo.url }}" class="card-img-top" alt="{{ album.name_album }}">
+                    {% else %}
+                        <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="bi bi-disc" style="font-size: 2rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ album.name_album }}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">Жанр: {{ album.genre|default:"Не указан" }}</small><br>
+                            <small class="text-muted">Дата выхода: {{ album.release_date }}</small>
+                        </p>
+                        <a href="#" class="btn btn-primary">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="text-center">Нет доступных альбомов.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Жанры -->
+    <section class="mb-5">
+        <h2 class="mb-4">Жанры</h2>
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4">
+            {% for genre in genres %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ genre.name }}</h5>
+                        <a href="#" class="btn btn-outline-primary btn-sm">Показать все</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="text-center">Нет доступных жанров.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %} 

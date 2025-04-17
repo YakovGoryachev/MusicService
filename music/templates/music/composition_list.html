@@ -1,0 +1,84 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Композиции{% endblock %}
+
+{% block content %}
+<h1>Композиции</h1>
+
+<div class="row mb-4">
+    <div class="col">
+        <form class="d-flex" method="get">
+            <input class="form-control me-2" type="search" placeholder="Поиск композиций..." name="q" value="{{ request.GET.q }}">
+            <button class="btn btn-outline-primary" type="submit">Поиск</button>
+        </form>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for composition in compositions %}
+    <div class="col">
+        <div class="card h-100">
+            {% if composition.photo %}
+                <img src="{{ composition.photo.url }}" class="card-img-top" alt="{{ composition.name_composition }}">
+            {% else %}
+                <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                    <i class="bi bi-music-note" style="font-size: 2rem;"></i>
+                </div>
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ composition.name_composition }}</h5>
+                <p class="card-text">
+                    {% if composition.album %}
+                        <small class="text-muted">Альбом: {{ composition.album }}</small><br>
+                    {% endif %}
+                    <small class="text-muted">Жанр: {{ composition.genre|default:"Не указан" }}</small>
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                        <a href="{% url 'composition_detail' composition.id %}" class="btn btn-sm btn-outline-secondary">Подробнее</a>
+                        {% if user.is_authenticated %}
+                            <button type="button" class="btn btn-sm btn-outline-primary add-to-playlist" data-composition-id="{{ composition.id }}">
+                                В плейлист
+                            </button>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ composition.duration|divmod:60|first }}:{{ composition.duration|divmod:60|last|stringformat:"02d" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <p class="text-center">Композиции не найдены.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">&laquo; Первая</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">
+                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Следующая</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Последняя &raquo;</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %} 
