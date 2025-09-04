@@ -32,7 +32,6 @@
                                 <tr>
                                     <th>Название</th>
                                     <th>Описание</th>
-                                    <th>Жанры</th>
                                     <th>Альбомов</th>
                                     <th>Действия</th>
                                 </tr>
@@ -42,10 +41,10 @@
                                 <tr>
                                     <td>
                                         <strong>{{ group.name }}</strong>
-                                        {% if group.photo_url %}
+                                        {% if group.photo %}
                                             <br><small class="text-muted">
                                                 <i class="fas fa-image me-1"></i>
-                                                <a href="{{ group.photo_url }}" target="_blank" class="text-decoration-none">
+                                                <a href="{{ group.photo.url }}" target="_blank" class="text-decoration-none">
                                                     Фото
                                                 </a>
                                             </small>
@@ -58,13 +57,7 @@
                                             <span class="text-muted">Не указано</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {% for genre in group.genres.all %}
-                                            <span class="badge bg-primary me-1">{{ genre.name }}</span>
-                                        {% empty %}
-                                            <span class="text-muted">Не указаны</span>
-                                        {% endfor %}
-                                    </td>
+
                                     <td>
                                         <span class="badge bg-info">{{ group.album_set.count }}</span>
                                     </td>
@@ -73,18 +66,19 @@
                                             <a href="{% url 'music:group_detail' group.pk %}" class="btn btn-sm btn-outline-primary" title="Просмотр">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-outline-warning" title="Редактировать">
+                                            <a href="{% url 'music:admin_edit_group' group.pk %}" class="btn btn-sm btn-outline-warning" title="Редактировать">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Удалить" 
+                                                    onclick="confirmDelete('{{ group.name }}', '{% url 'music:admin_delete_group' group.pk %}')">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center py-4">
+                                    <td colspan="4" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-users fa-2x mb-3"></i>
                                             <p>Группы не найдены</p>
@@ -118,4 +112,12 @@
     margin-right: 0;
 }
 </style>
+
+<script>
+function confirmDelete(groupName, deleteUrl) {
+    if (confirm(`Вы уверены, что хотите удалить группу "${groupName}"? Это действие нельзя отменить.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+</script>
 {% endblock %}

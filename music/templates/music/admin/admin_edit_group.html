@@ -1,0 +1,123 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Редактирование группы{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <main class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-edit me-2"></i>Редактирование группы
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Название группы -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">
+                                        <i class="fas fa-users me-2"></i>Название группы <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="name" name="name" value="{{ group.name }}" required>
+                                </div>
+
+                                <!-- Описание группы -->
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">
+                                        <i class="fas fa-file-text me-2"></i>Описание группы
+                                    </label>
+                                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="Расскажите о группе...">{{ group.description }}</textarea>
+                                    <div class="form-text">Краткое описание группы (необязательно)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <!-- Текущее фото -->
+                                {% if group.photo %}
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-image me-2"></i>Текущее фото
+                                    </label>
+                                    <div class="text-center">
+                                        <img src="{{ group.photo.url }}" alt="{{ group.name }}" class="img-fluid rounded" style="max-width: 200px;">
+                                        <p class="text-muted mt-2">{{ group.photo.name }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Новое фото -->
+                                <div class="mb-3">
+                                    <label for="photo" class="form-label">
+                                        <i class="fas fa-upload me-2"></i>Новое фото
+                                    </label>
+                                    <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                                    <div class="form-text">Загрузите новое фото (необязательно)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'music:admin_groups' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                            </a>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Сохранить изменения
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #5a5c69;
+}
+
+.btn {
+    border-radius: 0.35rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+
+.btn-primary:hover {
+    background-color: #2e59d9;
+    border-color: #2653d4;
+}
+
+.btn-secondary {
+    background-color: #858796;
+    border-color: #858796;
+}
+
+.btn-secondary:hover {
+    background-color: #717384;
+    border-color: #6b6d7d;
+}
+</style>
+{% endblock %}

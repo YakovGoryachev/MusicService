@@ -64,5 +64,7 @@ urlpatterns = [
     path('admin-panel/delete-artist/<uuid:artist_id>/', views.admin_delete_artist, name='admin_delete_artist'),
     path('admin-panel/groups/', views.admin_groups, name='admin_groups'),
     path('admin-panel/create-group/', views.admin_create_group, name='admin_create_group'),
+    path('admin-panel/edit-group/<uuid:group_id>/', views.admin_edit_group, name='admin_edit_group'),
+    path('admin-panel/delete-group/<uuid:group_id>/', views.admin_delete_group, name='admin_delete_group'),
     path('admin-panel/genres/', views.admin_genres, name='admin_genres'),
 ] 

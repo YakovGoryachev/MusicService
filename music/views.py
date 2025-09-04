@@ -956,12 +956,75 @@ def admin_groups(request):
         messages.error(request, 'Доступ запрещен. Требуются права администратора.')
         return redirect('music:home')
     
-    groups = Group.objects.prefetch_related('genres').order_by('-id')
+    groups = Group.objects.all().order_by('-id')
     
     context = {
         'groups': groups,
     }
     return render(request, 'music/admin/admin_groups.html', context)
+
+
+@login_required
+def admin_edit_group(request, group_id):
+    """Редактирование группы"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    try:
+        group = Group.objects.get(id=group_id)
+    except Group.DoesNotExist:
+        messages.error(request, 'Группа не найдена!')
+        return redirect('music:admin_groups')
+    
+    if request.method == 'POST':
+        # Обработка редактирования группы
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        photo = request.FILES.get('photo')
+        
+        if name:
+            try:
+                group.name = name
+                group.description = description if description else ''
+                
+                # Обновляем фото только если загружено новое
+                if photo:
+                    group.photo = photo
+                
+                group.save()
+                
+                messages.success(request, f'Группа "{name}" успешно обновлена!')
+                return redirect('music:admin_groups')
+            except Exception as e:
+                messages.error(request, f'Ошибка обновления группы: {str(e)}')
+        else:
+            messages.error(request, 'Заполните все обязательные поля!')
+    
+    context = {
+        'group': group,
+    }
+    return render(request, 'music/admin/admin_edit_group.html', context)
+
+
+@login_required
+def admin_delete_group(request, group_id):
+    """Удаление группы"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    try:
+        group = Group.objects.get(id=group_id)
+        group_name = group.name
+        group.delete()
+        messages.success(request, f'Группа "{group_name}" успешно удалена!')
+    except Group.DoesNotExist:
+        messages.error(request, 'Группа не найдена!')
+    except Exception as e:
+        messages.error(request, f'Ошибка удаления группы: {str(e)}')
+    
+    return redirect('music:admin_groups')
 
 
 @login_required
