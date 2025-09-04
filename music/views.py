@@ -699,12 +699,92 @@ def admin_albums(request):
         messages.error(request, 'Доступ запрещен. Требуются права администратора.')
         return redirect('music:home')
     
-    albums = Album.objects.select_related('artist', 'group').prefetch_related('genres').order_by('-id')
+    albums = Album.objects.select_related('artist', 'group').order_by('-id')
     
     context = {
         'albums': albums,
     }
     return render(request, 'music/admin/admin_albums.html', context)
+
+
+@login_required
+def admin_edit_album(request, album_id):
+    """Редактирование альбома"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    try:
+        album = Album.objects.get(id=album_id)
+    except Album.DoesNotExist:
+        messages.error(request, 'Альбом не найден!')
+        return redirect('music:admin_albums')
+    
+    if request.method == 'POST':
+        # Обработка редактирования альбома
+        name = request.POST.get('name')
+        artist_id = request.POST.get('artist')
+        group_id = request.POST.get('group')
+        release_date = request.POST.get('release_date')
+        photo = request.FILES.get('photo')
+        
+        if name and (artist_id or group_id):
+            try:
+                artist = None
+                group = None
+                
+                if artist_id:
+                    artist = Artist.objects.get(pk=artist_id)
+                if group_id:
+                    group = Group.objects.get(pk=group_id)
+                
+                album.name = name
+                album.artist = artist
+                album.group = group
+                album.release_date = release_date if release_date else None
+                
+                # Обновляем фото только если загружено новое
+                if photo:
+                    album.photo = photo
+                
+                album.save()
+                
+                messages.success(request, f'Альбом "{name}" успешно обновлен!')
+                return redirect('music:admin_albums')
+            except Exception as e:
+                messages.error(request, f'Ошибка обновления альбома: {str(e)}')
+        else:
+            messages.error(request, 'Заполните все обязательные поля!')
+    
+    artists = Artist.objects.all()
+    groups = Group.objects.all()
+    
+    context = {
+        'album': album,
+        'artists': artists,
+        'groups': groups,
+    }
+    return render(request, 'music/admin/admin_edit_album.html', context)
+
+
+@login_required
+def admin_delete_album(request, album_id):
+    """Удаление альбома"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    try:
+        album = Album.objects.get(id=album_id)
+        album_name = album.name
+        album.delete()
+        messages.success(request, f'Альбом "{album_name}" успешно удален!')
+    except Album.DoesNotExist:
+        messages.error(request, 'Альбом не найден!')
+    except Exception as e:
+        messages.error(request, f'Ошибка удаления альбома: {str(e)}')
+    
+    return redirect('music:admin_albums')
 
 
 @login_required
@@ -720,8 +800,7 @@ def admin_create_album(request):
         artist_id = request.POST.get('artist')
         group_id = request.POST.get('group')
         release_date = request.POST.get('release_date')
-        photo_url = request.POST.get('photo_url')
-        genre_ids = request.POST.getlist('genres')
+        photo = request.FILES.get('photo')
         
         if name and (artist_id or group_id):
             try:
@@ -738,14 +817,8 @@ def admin_create_album(request):
                     artist=artist,
                     group=group,
                     release_date=release_date if release_date else None,
-                    photo_url=photo_url if photo_url else None
+                    photo=photo if photo else None
                 )
-                
-                # Добавляем жанры
-                for genre_id in genre_ids:
-                    if genre_id:
-                        genre = Genre.objects.get(pk=genre_id)
-                        album.genres.add(genre)
                 
                 messages.success(request, f'Альбом "{name}" успешно создан!')
                 return redirect('music:admin_albums')
@@ -756,12 +829,10 @@ def admin_create_album(request):
     
     artists = Artist.objects.all()
     groups = Group.objects.all()
-    genres = Genre.objects.all()
     
     context = {
         'artists': artists,
         'groups': groups,
-        'genres': genres,
     }
     return render(request, 'music/admin/admin_create_album.html', context)
 
@@ -773,7 +844,7 @@ def admin_artists(request):
         messages.error(request, 'Доступ запрещен. Требуются права администратора.')
         return redirect('music:home')
     
-    artists = Artist.objects.prefetch_related('genres').order_by('-id')
+    artists = Artist.objects.all().order_by('-id')
     
     context = {
         'artists': artists,
@@ -792,22 +863,17 @@ def admin_create_artist(request):
         # Обработка создания артиста
         name = request.POST.get('name')
         bio = request.POST.get('bio')
-        photo_url = request.POST.get('photo_url')
-        genre_ids = request.POST.getlist('genres')
+        artist_role = request.POST.get('artist_role')
+        avatar = request.FILES.get('avatar')
         
         if name:
             try:
                 artist = Artist.objects.create(
                     name=name,
-                    bio=bio if bio else '',
-                    photo_url=photo_url if photo_url else None
+                    biography=bio if bio else '',
+                    artist_role=artist_role if artist_role else '',
+                    avatar=avatar if avatar else None
                 )
-                
-                # Добавляем жанры
-                for genre_id in genre_ids:
-                    if genre_id:
-                        genre = Genre.objects.get(pk=genre_id)
-                        artist.genres.add(genre)
                 
                 messages.success(request, f'Артист "{name}" успешно создан!')
                 return redirect('music:admin_artists')
@@ -816,14 +882,73 @@ def admin_create_artist(request):
         else:
             messages.error(request, 'Заполните все обязательные поля!')
     
-    genres = Genre.objects.all()
-    
-    context = {
-        'genres': genres,
-    }
+    context = {}
     return render(request, 'music/admin/admin_create_artist.html', context)
 
 
+@login_required
+def admin_edit_artist(request, artist_id):
+    """Редактирование артиста"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    try:
+        artist = Artist.objects.get(id=artist_id)
+    except Artist.DoesNotExist:
+        messages.error(request, 'Артист не найден!')
+        return redirect('music:admin_artists')
+    
+    if request.method == 'POST':
+        # Обработка редактирования артиста
+        name = request.POST.get('name')
+        bio = request.POST.get('bio')
+        artist_role = request.POST.get('artist_role')
+        avatar = request.FILES.get('avatar')
+        
+        if name:
+            try:
+                artist.name = name
+                artist.biography = bio if bio else ''
+                artist.artist_role = artist_role if artist_role else ''
+                
+                # Обновляем фото только если загружено новое
+                if avatar:
+                    artist.avatar = avatar
+                
+                artist.save()
+                
+                messages.success(request, f'Артист "{name}" успешно обновлен!')
+                return redirect('music:admin_artists')
+            except Exception as e:
+                messages.error(request, f'Ошибка обновления артиста: {str(e)}')
+        else:
+            messages.error(request, 'Заполните все обязательные поля!')
+    
+    context = {
+        'artist': artist,
+    }
+    return render(request, 'music/admin/admin_edit_artist.html', context)
+
+
+@login_required
+def admin_delete_artist(request, artist_id):
+    """Удаление артиста"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    try:
+        artist = Artist.objects.get(id=artist_id)
+        artist_name = artist.name
+        artist.delete()
+        messages.success(request, f'Артист "{artist_name}" успешно удален!')
+    except Artist.DoesNotExist:
+        messages.error(request, 'Артист не найден!')
+    except Exception as e:
+        messages.error(request, f'Ошибка удаления артиста: {str(e)}')
+    
+    return redirect('music:admin_artists')
 @login_required
 def admin_groups(request):
     """Управление группами"""
@@ -850,22 +975,15 @@ def admin_create_group(request):
         # Обработка создания группы
         name = request.POST.get('name')
         description = request.POST.get('description')
-        photo_url = request.POST.get('photo_url')
-        genre_ids = request.POST.getlist('genres')
+        photo = request.FILES.get('photo')
         
         if name:
             try:
                 group = Group.objects.create(
                     name=name,
                     description=description if description else '',
-                    photo_url=photo_url if photo_url else None
+                    photo=photo if photo else None
                 )
-                
-                # Добавляем жанры
-                for genre_id in genre_ids:
-                    if genre_id:
-                        genre = Genre.objects.get(pk=genre_id)
-                        group.genres.add(genre)
                 
                 messages.success(request, f'Группа "{name}" успешно создана!')
                 return redirect('music:admin_groups')
@@ -874,11 +992,7 @@ def admin_create_group(request):
         else:
             messages.error(request, 'Заполните все обязательные поля!')
     
-    genres = Genre.objects.all()
-    
-    context = {
-        'genres': genres,
-    }
+    context = {}
     return render(request, 'music/admin/admin_create_group.html', context)
 
 

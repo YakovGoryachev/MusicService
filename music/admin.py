@@ -40,7 +40,7 @@ class GroupAdmin(admin.ModelAdmin):
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
     """Админ-панель для артистов"""
-    list_display = ('name', 'id', 'avatar_url')
+    list_display = ('name', 'id', 'avatar')
     search_fields = ('name',)
     list_filter = ('biography',)
     ordering = ('name',)

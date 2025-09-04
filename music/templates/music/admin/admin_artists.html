@@ -31,8 +31,8 @@
                             <thead>
                                 <tr>
                                     <th>Имя</th>
+                                    <th>Роль</th>
                                     <th>Биография</th>
-                                    <th>Жанры</th>
                                     <th>Альбомов</th>
                                     <th>Действия</th>
                                 </tr>
@@ -42,28 +42,28 @@
                                 <tr>
                                     <td>
                                         <strong>{{ artist.name }}</strong>
-                                        {% if artist.photo_url %}
+                                        {% if artist.avatar %}
                                             <br><small class="text-muted">
                                                 <i class="fas fa-image me-1"></i>
-                                                <a href="{{ artist.photo_url }}" target="_blank" class="text-decoration-none">
+                                                <a href="{{ artist.avatar.url }}" target="_blank" class="text-decoration-none">
                                                     Фото
                                                 </a>
                                             </small>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if artist.bio %}
-                                            {{ artist.bio|truncatechars:100 }}
+                                        {% if artist.artist_role %}
+                                            <span class="badge bg-secondary">{{ artist.artist_role }}</span>
                                         {% else %}
                                             <span class="text-muted">Не указана</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% for genre in artist.genres.all %}
-                                            <span class="badge bg-primary me-1">{{ genre.name }}</span>
-                                        {% empty %}
-                                            <span class="text-muted">Не указаны</span>
-                                        {% endfor %}
+                                        {% if artist.biography %}
+                                            {{ artist.biography|truncatechars:100 }}
+                                        {% else %}
+                                            <span class="text-muted">Не указана</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <span class="badge bg-info">{{ artist.album_set.count }}</span>
@@ -73,12 +73,13 @@
                                             <a href="{% url 'music:artist_detail' artist.pk %}" class="btn btn-sm btn-outline-primary" title="Просмотр">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-outline-warning" title="Редактировать">
+                                            <a href="{% url 'music:admin_edit_artist' artist.pk %}" class="btn btn-sm btn-outline-warning" title="Редактировать">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Удалить" 
+                                                    onclick="confirmDelete('{{ artist.name }}', '{% url 'music:admin_delete_artist' artist.pk %}')">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -118,4 +119,12 @@
     margin-right: 0;
 }
 </style>
+
+<script>
+function confirmDelete(artistName, deleteUrl) {
+    if (confirm(`Вы уверены, что хотите удалить артиста "${artistName}"? Это действие нельзя отменить.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+</script>
 {% endblock %}

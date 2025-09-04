@@ -77,6 +77,8 @@ class Group(models.Model):
     """Модель музыкальной группы"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, verbose_name='Название группы')
+    description = models.TextField(blank=True, verbose_name='Описание группы')
+    photo = models.ImageField(upload_to='groups/', null=True, blank=True, verbose_name='Фото группы')
     
     class Meta:
         db_table = 'группа'
@@ -91,8 +93,9 @@ class Artist(models.Model):
     """Модель артиста"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, verbose_name='Имя артиста')
-    avatar_url = models.URLField(max_length=500, null=True, blank=True, verbose_name='URL аватара')
+    avatar = models.ImageField(upload_to='artists/', null=True, blank=True, verbose_name='Аватар')
     biography = models.TextField(blank=True, verbose_name='Биография')
+    artist_role = models.CharField(max_length=100, blank=True, verbose_name='Роль артиста')
     
     class Meta:
         db_table = 'артисты'
@@ -126,8 +129,8 @@ class Album(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название альбома')
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Группа')
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Артист')
-    release_date = models.DateField(verbose_name='Дата выпуска')
-    photo_url = models.URLField(max_length=500, null=True, blank=True, verbose_name='URL фото')
+    release_date = models.DateField(null=True, blank=True, verbose_name='Дата выпуска')
+    photo = models.ImageField(upload_to='albums/', null=True, blank=True, verbose_name='Обложка альбома')
     play_count = models.PositiveIntegerField(default=0, verbose_name='Количество прослушиваний')
     
     class Meta:

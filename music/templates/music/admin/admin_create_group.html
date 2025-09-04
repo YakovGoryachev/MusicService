@@ -28,7 +28,7 @@
                             </h6>
                         </div>
                         <div class="card-body">
-                            <form method="post">
+                            <form method="post" enctype="multipart/form-data">
                                 {% csrf_token %}
                                 
                                 <!-- Основная информация о группе -->
@@ -50,31 +50,11 @@
 
                                 <!-- Фото группы -->
                                 <div class="mb-3">
-                                    <label for="photo_url" class="form-label">
-                                        <i class="fas fa-image me-2"></i>URL фото группы
+                                    <label for="photo" class="form-label">
+                                        <i class="fas fa-image me-2"></i>Фото группы
                                     </label>
-                                    <input type="url" class="form-control" id="photo_url" name="photo_url" placeholder="https://example.com/group-photo.jpg">
-                                    <div class="form-text">Ссылка на изображение (необязательно)</div>
-                                </div>
-
-                                <!-- Жанры -->
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        <i class="fas fa-tags me-2"></i>Жанры
-                                    </label>
-                                    <div class="row">
-                                        {% for genre in genres %}
-                                            <div class="col-md-3 mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="genres" value="{{ genre.id }}" id="genre_{{ genre.id }}">
-                                                    <label class="form-check-label" for="genre_{{ genre.id }}">
-                                                        {{ genre.name }}
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                    <div class="form-text">Выберите жанры, в которых работает группа</div>
+                                    <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                                    <div class="form-text">Загрузите фото группы (необязательно)</div>
                                 </div>
 
                                 <!-- Кнопки -->

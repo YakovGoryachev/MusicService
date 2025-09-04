@@ -1,0 +1,158 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Редактирование альбома{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <main class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-edit me-2"></i>Редактирование альбома
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Название альбома -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">
+                                        <i class="fas fa-compact-disc me-2"></i>Название альбома <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="name" name="name" value="{{ album.name }}" required>
+                                </div>
+
+                                <!-- Артист или группа -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="artist" class="form-label">
+                                                <i class="fas fa-user me-2"></i>Артист
+                                            </label>
+                                            <select class="form-control" id="artist" name="artist">
+                                                <option value="">Выберите артиста</option>
+                                                {% for artist in artists %}
+                                                    <option value="{{ artist.id }}" {% if album.artist == artist %}selected{% endif %}>
+                                                        {{ artist.name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="group" class="form-label">
+                                                <i class="fas fa-users me-2"></i>Группа
+                                            </label>
+                                            <select class="form-control" id="group" name="group">
+                                                <option value="">Выберите группу</option>
+                                                {% for group in groups %}
+                                                    <option value="{{ group.id }}" {% if album.group == group %}selected{% endif %}>
+                                                        {{ group.name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Дата выпуска -->
+                                <div class="mb-3">
+                                    <label for="release_date" class="form-label">
+                                        <i class="fas fa-calendar me-2"></i>Дата выпуска
+                                    </label>
+                                    <input type="date" class="form-control" id="release_date" name="release_date" 
+                                           value="{% if album.release_date %}{{ album.release_date|date:'Y-m-d' }}{% endif %}">
+                                    <div class="form-text">Дата выпуска альбома (необязательно)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <!-- Текущая обложка -->
+                                {% if album.photo %}
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-image me-2"></i>Текущая обложка
+                                    </label>
+                                    <div class="text-center">
+                                        <img src="{{ album.photo.url }}" alt="{{ album.name }}" class="img-fluid rounded" style="max-width: 200px;">
+                                        <p class="text-muted mt-2">{{ album.photo.name }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Новая обложка -->
+                                <div class="mb-3">
+                                    <label for="photo" class="form-label">
+                                        <i class="fas fa-upload me-2"></i>Новая обложка
+                                    </label>
+                                    <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                                    <div class="form-text">Загрузите новую обложку (необязательно)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'music:admin_albums' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                            </a>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Сохранить изменения
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #5a5c69;
+}
+
+.btn {
+    border-radius: 0.35rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+
+.btn-primary:hover {
+    background-color: #2e59d9;
+    border-color: #2653d4;
+}
+
+.btn-secondary {
+    background-color: #858796;
+    border-color: #858796;
+}
+
+.btn-secondary:hover {
+    background-color: #717384;
+    border-color: #6b6d7d;
+}
+</style>
+{% endblock %}

@@ -33,7 +33,6 @@
                                     <th>Название</th>
                                     <th>Артист/Группа</th>
                                     <th>Дата выпуска</th>
-                                    <th>Жанры</th>
                                     <th>Треков</th>
                                     <th>Действия</th>
                                 </tr>
@@ -43,10 +42,10 @@
                                 <tr>
                                     <td>
                                         <strong>{{ album.name }}</strong>
-                                        {% if album.photo_url %}
+                                        {% if album.photo %}
                                             <br><small class="text-muted">
                                                 <i class="fas fa-image me-1"></i>
-                                                <a href="{{ album.photo_url }}" target="_blank" class="text-decoration-none">
+                                                <a href="{{ album.photo.url }}" target="_blank" class="text-decoration-none">
                                                     Обложка
                                                 </a>
                                             </small>
@@ -72,13 +71,7 @@
                                             <span class="text-muted">Не указана</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {% for genre in album.genres.all %}
-                                            <span class="badge bg-primary me-1">{{ genre.name }}</span>
-                                        {% empty %}
-                                            <span class="text-muted">Не указаны</span>
-                                        {% endfor %}
-                                    </td>
+
                                     <td>
                                         <span class="badge bg-info">{{ album.track_set.count }}</span>
                                     </td>
@@ -87,18 +80,19 @@
                                             <a href="{% url 'music:album_detail' album.pk %}" class="btn btn-sm btn-outline-primary" title="Просмотр">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-outline-warning" title="Редактировать">
+                                            <a href="{% url 'music:admin_edit_album' album.pk %}" class="btn btn-sm btn-outline-warning" title="Редактировать">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Удалить" 
+                                                    onclick="confirmDelete('{{ album.name }}', '{% url 'music:admin_delete_album' album.pk %}')">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-4">
+                                    <td colspan="5" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-compact-disc fa-2x mb-3"></i>
                                             <p>Альбомы не найдены</p>
@@ -131,5 +125,14 @@
 .btn-group .btn:last-child {
     margin-right: 0;
 }
+</style>
+
+<script>
+function confirmDelete(albumName, deleteUrl) {
+    if (confirm(`Вы уверены, что хотите удалить альбом "${albumName}"? Это действие нельзя отменить.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+</script>
 </style>
 {% endblock %}
