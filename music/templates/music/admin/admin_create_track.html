@@ -1,0 +1,268 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Создать трек - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Основной контент без боковой панели -->
+        <main class="col-12 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">
+                    <i class="fas fa-plus me-2"></i>Создать новый трек
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+
+            <!-- Форма создания трека -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-edit me-2"></i>Информация о треке
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                <!-- Основная информация о треке -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                                            <i class="fas fa-music me-2"></i>{{ form.name.label }}
+                                        </label>
+                                        {{ form.name }}
+                                        {% if form.name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.duration.id_for_label }}" class="form-label">
+                                            <i class="fas fa-clock me-2"></i>{{ form.duration.label }}
+                                        </label>
+                                        {{ form.duration }}
+                                        {% if form.duration.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.duration.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">В секундах (необязательно)</div>
+                                    </div>
+                                </div>
+
+                                <!-- Файл трека -->
+                                <div class="mb-3">
+                                    <label for="{{ form.file.id_for_label }}" class="form-label">
+                                        <i class="fas fa-file-audio me-2"></i>{{ form.file.label }}
+                                    </label>
+                                    {{ form.file }}
+                                    {% if form.file.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.file.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Поддерживаемые форматы: MP3, WAV, FLAC, OGG</div>
+                                </div>
+
+                                <!-- Артист или группа -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.artist_name.id_for_label }}" class="form-label">
+                                            <i class="fas fa-user me-2"></i>{{ form.artist_name.label }}
+                                        </label>
+                                        {{ form.artist_name }}
+                                        {% if form.artist_name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.artist_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Если трек сольный</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.group_name.id_for_label }}" class="form-label">
+                                            <i class="fas fa-users me-2"></i>{{ form.group_name.label }}
+                                        </label>
+                                        {{ form.group_name }}
+                                        {% if form.group_name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.group_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Если трек групповой</div>
+                                    </div>
+                                </div>
+
+                                <!-- Альбом -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.album_name.id_for_label }}" class="form-label">
+                                            <i class="fas fa-compact-disc me-2"></i>{{ form.album_name.label }}
+                                        </label>
+                                        {{ form.album_name }}
+                                        {% if form.album_name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.album_name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Необязательно</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.album_release_date.id_for_label }}" class="form-label">
+                                            <i class="fas fa-calendar me-2"></i>{{ form.album_release_date.label }}
+                                        </label>
+                                        {{ form.album_release_date }}
+                                        {% if form.album_release_date.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.album_release_date.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Дата выпуска альбома</div>
+                                    </div>
+                                </div>
+
+                                <!-- Жанры -->
+                                <div class="mb-3">
+                                    <label for="{{ form.genre_names.id_for_label }}" class="form-label">
+                                        <i class="fas fa-tags me-2"></i>{{ form.genre_names.label }}
+                                    </label>
+                                    {{ form.genre_names }}
+                                    {% if form.genre_names.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.genre_names.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">{{ form.genre_names.help_text }}</div>
+                                </div>
+
+                                <!-- Кнопки -->
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Создать трек
+                                    </button>
+                                    <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Отмена
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Информационная панель -->
+                <div class="col-lg-4">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">
+                                <i class="fas fa-info-circle me-2"></i>Как это работает
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-lightbulb me-2"></i>Простой способ добавления
+                                </h6>
+                                <p class="small text-muted">
+                                    Просто заполните форму, и система автоматически создаст все необходимые связи:
+                                </p>
+                                <ul class="small text-muted">
+                                    <li>Артисты и группы создаются автоматически</li>
+                                    <li>Альбомы создаются при необходимости</li>
+                                    <li>Жанры добавляются автоматически</li>
+                                    <li>Файлы сохраняются в папку tracks/</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-success">
+                                    <i class="fas fa-check-circle me-2"></i>Что происходит при создании
+                                </h6>
+                                <ol class="small text-muted">
+                                    <li>Загружается аудиофайл</li>
+                                    <li>Создается запись трека</li>
+                                    <li>Создаются/находятся артист/группа</li>
+                                    <li>Создается/находится альбом</li>
+                                    <li>Добавляются жанры</li>
+                                    <li>Устанавливаются все связи</li>
+                                </ol>
+                            </div>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Важно:</strong> Укажите либо имя артиста, либо название группы. Оба поля не могут быть пустыми.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn {
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+.invalid-feedback {
+    font-size: 0.875rem;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+

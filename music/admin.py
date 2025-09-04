@@ -1,76 +1,136 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from .models import (
-    Genre, Tag, Composition, Album, Playlist, Group,
-    ParticipantInfo, ParticipantRole, CompositionParticipant,
-    Evaluation, Feedback, UserListeningHistory, UserFollower,
-    PlaylistComposition
+    User, Group, Artist, ArtistGroup, Album, Genre, Track, 
+    TrackGenre, Playlist, PlaylistTrack, Rating, Comment
 )
 
-@admin.register(Genre)
-class GenreAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
-    search_fields = ('name',)
 
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
-    search_fields = ('name',)
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    """Админ-панель для пользователей"""
+    list_display = ('login', 'email', 'role', 'registration_date', 'is_active')
+    list_filter = ('role', 'is_active', 'registration_date')
+    search_fields = ('login', 'email')
+    ordering = ('-registration_date',)
+    
+    fieldsets = (
+        (None, {'fields': ('login', 'password')}),
+        ('Персональная информация', {'fields': ('email', 'date_of_birth', 'avatar_url')}),
+        ('Разрешения', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Важные даты', {'fields': ('last_login', 'registration_date')}),
+    )
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('login', 'email', 'password1', 'password2', 'role'),
+        }),
+    )
 
-@admin.register(Composition)
-class CompositionAdmin(admin.ModelAdmin):
-    list_display = ('name_composition', 'duration', 'genre', 'album', 'date')
-    list_filter = ('genre', 'album', 'date')
-    search_fields = ('name_composition',)
-    filter_horizontal = ('tags',)
-
-@admin.register(Album)
-class AlbumAdmin(admin.ModelAdmin):
-    list_display = ('name_album', 'group', 'genre', 'release_date', 'created_at')
-    list_filter = ('group', 'genre', 'release_date')
-    search_fields = ('name_album', 'group__name_group')
-
-@admin.register(Playlist)
-class PlaylistAdmin(admin.ModelAdmin):
-    list_display = ('name_playlist', 'user', 'is_public', 'created_at')
-    list_filter = ('is_public', 'created_at')
-    search_fields = ('name_playlist', 'user__username')
 
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
-    list_display = ('name_group', 'created_at')
-    search_fields = ('name_group',)
+    """Админ-панель для групп"""
+    list_display = ('name', 'id')
+    search_fields = ('name',)
+    ordering = ('name',)
 
-@admin.register(ParticipantInfo)
-class ParticipantInfoAdmin(admin.ModelAdmin):
-    list_display = ('name', 'lastname', 'surname', 'date_birth')
-    search_fields = ('name', 'lastname')
-    filter_horizontal = ('groups',)
 
-@admin.register(ParticipantRole)
-class ParticipantRoleAdmin(admin.ModelAdmin):
-    list_display = ('name_role', 'description')
-    search_fields = ('name_role',)
+@admin.register(Artist)
+class ArtistAdmin(admin.ModelAdmin):
+    """Админ-панель для артистов"""
+    list_display = ('name', 'id', 'avatar_url')
+    search_fields = ('name',)
+    list_filter = ('biography',)
+    ordering = ('name',)
 
-@admin.register(CompositionParticipant)
-class CompositionParticipantAdmin(admin.ModelAdmin):
-    list_display = ('composition', 'participant', 'role')
-    list_filter = ('role',)
-    search_fields = ('composition__name_composition', 'participant__name')
 
-@admin.register(Evaluation)
-class EvaluationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'composition', 'rating', 'date')
-    list_filter = ('rating', 'date')
-    search_fields = ('user__username', 'composition__name_composition')
+@admin.register(ArtistGroup)
+class ArtistGroupAdmin(admin.ModelAdmin):
+    """Админ-панель для связи артистов и групп"""
+    list_display = ('artist', 'group', 'artist_role')
+    list_filter = ('artist_role', 'group')
+    search_fields = ('artist__name', 'group__name')
+    ordering = ('group__name', 'artist__name')
 
-@admin.register(Feedback)
-class FeedbackAdmin(admin.ModelAdmin):
-    list_display = ('user', 'composition', 'is_moderated', 'date')
-    list_filter = ('is_moderated', 'date')
-    search_fields = ('user__username', 'composition__name_composition')
 
-@admin.register(UserListeningHistory)
-class UserListeningHistoryAdmin(admin.ModelAdmin):
-    list_display = ('user', 'composition', 'listened_at', 'duration_listened')
-    list_filter = ('listened_at',)
-    search_fields = ('user__username', 'composition__name_composition')
+@admin.register(Album)
+class AlbumAdmin(admin.ModelAdmin):
+    """Админ-панель для альбомов"""
+    list_display = ('name', 'group', 'artist', 'release_date', 'play_count')
+    list_filter = ('release_date', 'group', 'artist')
+    search_fields = ('name', 'group__name', 'artist__name')
+    ordering = ('-release_date', 'name')
+    date_hierarchy = 'release_date'
+
+
+@admin.register(Genre)
+class GenreAdmin(admin.ModelAdmin):
+    """Админ-панель для жанров"""
+    list_display = ('name', 'id')
+    search_fields = ('name',)
+    ordering = ('name',)
+
+
+@admin.register(Track)
+class TrackAdmin(admin.ModelAdmin):
+    """Админ-панель для треков"""
+    list_display = ('name', 'album', 'duration', 'play_count', 'get_genres')
+    list_filter = ('album__group', 'album__artist', 'duration')
+    search_fields = ('name', 'album__name', 'album__group__name')
+    ordering = ('album__name', 'name')
+    
+    def get_genres(self, obj):
+        return ", ".join([genre.name for genre in obj.genres.all()])
+    get_genres.short_description = 'Жанры'
+
+
+@admin.register(TrackGenre)
+class TrackGenreAdmin(admin.ModelAdmin):
+    """Админ-панель для связи треков и жанров"""
+    list_display = ('track', 'genre')
+    list_filter = ('genre',)
+    search_fields = ('track__name', 'genre__name')
+    ordering = ('track__name', 'genre__name')
+
+
+@admin.register(Playlist)
+class PlaylistAdmin(admin.ModelAdmin):
+    """Админ-панель для плейлистов"""
+    list_display = ('name', 'user', 'is_public', 'creation_date', 'get_track_count')
+    list_filter = ('is_public', 'creation_date', 'user')
+    search_fields = ('name', 'user__login', 'description')
+    ordering = ('-creation_date', 'name')
+    
+    def get_track_count(self, obj):
+        return obj.tracks.count()
+    get_track_count.short_description = 'Количество треков'
+
+
+@admin.register(PlaylistTrack)
+class PlaylistTrackAdmin(admin.ModelAdmin):
+    """Админ-панель для связи плейлистов и треков"""
+    list_display = ('playlist', 'track', 'added_date')
+    list_filter = ('added_date', 'playlist__user')
+    search_fields = ('playlist__name', 'track__name')
+    ordering = ('-added_date', 'playlist__name')
+
+
+@admin.register(Rating)
+class RatingAdmin(admin.ModelAdmin):
+    """Админ-панель для оценок"""
+    list_display = ('user', 'track', 'value')
+    list_filter = ('value', 'track__album__group')
+    search_fields = ('user__login', 'track__name')
+    ordering = ('-value', 'track__name')
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    """Админ-панель для комментариев"""
+    list_display = ('user', 'track', 'text', 'created_at')
+    list_filter = ('created_at', 'track__album__group')
+    search_fields = ('user__login', 'track__name', 'text')
+    ordering = ('-created_at',)
+    list_per_page = 50

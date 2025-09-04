@@ -3,43 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Музыкальный сервис{% endblock %}</title>
+    <title>{% block title %}Музыкальный Сервис{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #1db954;
+            --secondary-color: #191414;
+            --accent-color: #ff6b6b;
+            --text-color: #333;
+            --light-bg: #f8f9fa;
+            --dark-bg: #212529;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .nav-link {
+            color: white !important;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+            transform: translateY(-2px);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 4rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #18a34b;
+            border-color: #18a34b;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 25px;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .track-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .track-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .play-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .play-button:hover {
+            background: #18a34b;
+            transform: scale(1.1);
+        }
+        
+        .rating-stars {
+            color: #ffc107;
+            font-size: 1.2rem;
+        }
+        
+        .footer {
+            background: var(--dark-bg);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .search-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .genre-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 0.25rem;
+            display: inline-block;
+        }
+        
+        .messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .pagination .page-link {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'music:home' %}">Музыкальный сервис</a>
+            <a class="navbar-brand" href="{% url 'music:home' %}">
+                <i class="fas fa-music me-2"></i>Музыка
+            </a>
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'music:composition_list' %}">Композиции</a>
+                        <a class="nav-link" href="{% url 'music:home' %}">
+                            <i class="fas fa-home me-1"></i>Главная
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'music:composition_list' %}">Альбомы</a>
+                        <a class="nav-link" href="{% url 'music:track_list' %}">
+                            <i class="fas fa-list me-1"></i>Треки
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'music:composition_list' %}">Плейлисты</a>
+                        <a class="nav-link" href="{% url 'music:album_list' %}">
+                            <i class="fas fa-compact-disc me-1"></i>Альбомы
+                        </a>
                     </li>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'music:artist_list' %}">
+                            <i class="fas fa-user me-1"></i>Артисты
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'music:playlist_list' %}">
+                            <i class="fas fa-playlist me-1"></i>Плейлисты
+                        </a>
+                    </li>
+                    {% if user.is_authenticated and user.role == 'admin' %}
                         <li class="nav-item">
-                            <a class="nav-link" href="#">Профиль</a>
+                            <a class="nav-link" href="{% url 'music:admin_panel' %}">
+                                <i class="fas fa-cog me-1"></i>Админ панель
+                            </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Выход</a>
+                    {% endif %}
+                </ul>
+                
+                <!-- Поиск -->
+                <form class="d-flex me-3" method="GET" action="{% url 'music:track_list' %}">
+                    <input class="form-control me-2" type="search" name="q" placeholder="Поиск..." 
+                           value="{{ request.GET.q }}" aria-label="Search">
+                    <button class="btn btn-outline-light" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+                
+                <!-- Пользовательское меню -->
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i>{{ user.login }}
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="{% url 'music:profile' %}">
+                                    <i class="fas fa-user me-2"></i>Профиль
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'music:my_playlists' %}">
+                                    <i class="fas fa-heart me-2"></i>Мои плейлисты
+                                </a></li>
+                                {% if user.role == 'admin' %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'music:admin_panel' %}">
+                                        <i class="fas fa-cog me-2"></i>Админ панель
+                                    </a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'music:logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Выйти
+                                </a></li>
+                            </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="#">Вход</a>
+                            <a class="nav-link" href="{% url 'music:login' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Войти
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">Регистрация</a>
+                            <a class="nav-link" href="{% url 'music:register' %}">
+                                <i class="fas fa-user-plus me-1"></i>Регистрация
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
@@ -47,25 +284,77 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
-        {% if messages %}
+    <!-- Сообщения -->
+    {% if messages %}
+        <div class="messages">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
-        {% endif %}
+        </div>
+    {% endif %}
 
-        {% block content %}
-        {% endblock %}
-    </div>
+    <!-- Основной контент -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
 
-    <footer class="bg-dark text-light mt-5 py-3">
+    <!-- Подвал -->
+    <footer class="footer">
         <div class="container">
-            <p class="text-center mb-0">&copy; 2024 Музыкальный сервис</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-music me-2"></i>Музыкальный Сервис</h5>
+                    <p>Лучшая музыка для вас. Создавайте плейлисты, делитесь музыкой с друзьями.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <h6>Ссылки</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'music:home' %}" class="text-light">Главная</a></li>
+                        <li><a href="{% url 'music:track_list' %}" class="text-light">Треки</a></li>
+                        <li><a href="{% url 'music:album_list' %}" class="text-light">Альбомы</a></li>
+                        <li><a href="{% url 'music:playlist_list' %}" class="text-light">Плейлисты</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="text-center">
+                <p>&copy; 2024 Музыкальный Сервис. Все права защищены.</p>
+            </div>
         </div>
     </footer>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Автоматическое скрытие сообщений
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+        
+        // Плавная прокрутка для якорных ссылок
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
 </body>
 </html> 

@@ -1,0 +1,197 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Артисты - Музыкальный Сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Заголовок и поиск -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h2">
+                <i class="fas fa-user me-2"></i>Все артисты
+            </h1>
+            {% if request.GET.q %}
+                <p class="text-muted">Результаты поиска: "{{ request.GET.q }}"</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <form method="GET" action="{% url 'music:artist_list' %}" class="d-flex">
+                <input type="text" class="form-control me-2" name="q" placeholder="Поиск артистов..." 
+                       value="{{ request.GET.q }}" aria-label="Search">
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-filter me-2"></i>Фильтры
+                    </h6>
+                    <form method="GET" action="{% url 'music:artist_list' %}" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="genre" class="form-label">Жанр</label>
+                            <select class="form-select" id="genre" name="genre">
+                                <option value="">Все жанры</option>
+                                {% for genre in genres %}
+                                    <option value="{{ genre.name }}" {% if request.GET.genre == genre.name %}selected{% endif %}>
+                                        {{ genre.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sort" class="form-label">Сортировка</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>По имени</option>
+                                <option value="popular" {% if request.GET.sort == 'popular' %}selected{% endif %}>По популярности</option>
+                                <option value="albums" {% if request.GET.sort == 'albums' %}selected{% endif %}>По количеству альбомов</option>
+                                <option value="tracks" {% if request.GET.sort == 'tracks' %}selected{% endif %}>По количеству треков</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-1"></i>Применить
+                            </button>
+                            <a href="{% url 'music:artist_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Сбросить
+                            </a>
+                        </div>
+                        <!-- Сохраняем поисковый запрос -->
+                        {% if request.GET.q %}
+                            <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список артистов -->
+    <div class="row">
+        {% for artist in artists %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    {% if artist.photo_url %}
+                        <img src="{{ artist.photo_url }}" class="card-img-top" alt="{{ artist.name }}" style="height: 250px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 250px;">
+                            <i class="fas fa-user fa-4x text-white"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ artist.name }}</h5>
+                        
+                        <div class="mb-2">
+                            {% if artist.bio %}
+                                <p class="card-text text-muted">
+                                    {{ artist.bio|truncatewords:20 }}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h6 class="mb-0">{{ artist.albums.count }}</h6>
+                                        <small class="text-muted">Альбомов</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h6 class="mb-0">{{ artist.tracks.count }}</h6>
+                                    <small class="text-muted">Треков</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-play me-1"></i>{{ artist.play_count|default:0 }} прослушиваний
+                                </small>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-star text-warning me-1"></i>
+                                    <small class="text-muted">{{ artist.average_rating|default:"0.0"|floatformat:1 }}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'music:artist_detail' artist.pk %}" class="btn btn-primary flex-fill">
+                                    <i class="fas fa-eye me-1"></i>Профиль
+                                </a>
+                                {% if user.is_authenticated %}
+                                    <button class="btn btn-outline-primary" onclick="followArtist('{{ artist.pk }}')" title="Подписаться">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    {% if request.GET.q or request.GET.genre %}
+                        По вашему запросу ничего не найдено. Попробуйте изменить параметры поиска.
+                    {% else %}
+                        Пока нет артистов. Будьте первым, кто добавит артиста!
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Пагинация -->
+    {% if artists.has_other_pages %}
+        <nav aria-label="Навигация по страницам" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if artists.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ artists.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in artists.paginator.page_range %}
+                    {% if artists.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > artists.number|add:'-3' and num < artists.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if artists.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ artists.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+
+<script>
+function followArtist(artistId) {
+    // Здесь можно добавить логику подписки на артиста
+    alert('Функция "Подписаться на артиста" будет добавлена позже');
+}
+</script>
+{% endblock %}

@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,8 +29,10 @@ SECRET_KEY = 'django-insecure-c(h94!!)9)!1%wlil#yz%$+0sc7h)%x7rwd*ci21^648h8=$5t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
+# Кастомная модель пользователя
+AUTH_USER_MODEL = 'music.User'
 
 # Application definition
 
@@ -38,13 +43,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'firstApp',
     'music',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -80,12 +86,6 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-        # 'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': 'MusicDB',
-        # 'USER': 'postgres',
-        # 'PASSWORD': 'admin',
-        # 'HOST': 'localhost',
-        # 'PORT': '1234',
     }
 }
 
@@ -139,3 +139,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Login settings
 LOGIN_REDIRECT_URL = 'music:home'
 LOGOUT_REDIRECT_URL = 'music:home'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173"
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True

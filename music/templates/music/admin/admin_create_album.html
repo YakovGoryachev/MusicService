@@ -1,0 +1,205 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Создать альбом - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Основной контент без боковой панели -->
+        <main class="col-12 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">
+                    <i class="fas fa-plus me-2"></i>Создать новый альбом
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'music:admin_albums' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+
+            <!-- Форма создания альбома -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-edit me-2"></i>Информация об альбоме
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <!-- Основная информация об альбоме -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="name" class="form-label">
+                                            <i class="fas fa-compact-disc me-2"></i>Название альбома
+                                        </label>
+                                        <input type="text" class="form-control" id="name" name="name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="release_date" class="form-label">
+                                            <i class="fas fa-calendar me-2"></i>Дата выпуска
+                                        </label>
+                                        <input type="date" class="form-control" id="release_date" name="release_date">
+                                    </div>
+                                </div>
+
+                                <!-- Артист или группа -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="artist" class="form-label">
+                                            <i class="fas fa-user me-2"></i>Артист
+                                        </label>
+                                        <select class="form-select" id="artist" name="artist">
+                                            <option value="">Выберите артиста</option>
+                                            {% for artist in artists %}
+                                                <option value="{{ artist.id }}">{{ artist.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Если альбом сольный</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="group" class="form-label">
+                                            <i class="fas fa-users me-2"></i>Группа
+                                        </label>
+                                        <select class="form-select" id="group" name="group">
+                                            <option value="">Выберите группу</option>
+                                            {% for group in groups %}
+                                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Если альбом групповой</div>
+                                    </div>
+                                </div>
+
+                                <!-- Фото альбома -->
+                                <div class="mb-3">
+                                    <label for="photo_url" class="form-label">
+                                        <i class="fas fa-image me-2"></i>URL обложки альбома
+                                    </label>
+                                    <input type="url" class="form-control" id="photo_url" name="photo_url" placeholder="https://example.com/album-cover.jpg">
+                                    <div class="form-text">Ссылка на изображение обложки (необязательно)</div>
+                                </div>
+
+                                <!-- Жанры -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-tags me-2"></i>Жанры
+                                    </label>
+                                    <div class="row">
+                                        {% for genre in genres %}
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="genres" value="{{ genre.id }}" id="genre_{{ genre.id }}">
+                                                    <label class="form-check-label" for="genre_{{ genre.id }}">
+                                                        {{ genre.name }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Выберите жанры альбома</div>
+                                </div>
+
+                                <!-- Кнопки -->
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Создать альбом
+                                    </button>
+                                    <a href="{% url 'music:admin_albums' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Отмена
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Информационная панель -->
+                <div class="col-lg-4">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">
+                                <i class="fas fa-info-circle me-2"></i>Как это работает
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-lightbulb me-2"></i>Создание альбома
+                                </h6>
+                                <p class="small text-muted">
+                                    Альбом может принадлежать либо артисту, либо группе. Укажите только один из вариантов.
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-success">
+                                    <i class="fas fa-check-circle me-2"></i>Что происходит при создании
+                                </h6>
+                                <ol class="small text-muted">
+                                    <li>Создается запись альбома</li>
+                                    <li>Связывается с артистом или группой</li>
+                                    <li>Добавляются выбранные жанры</li>
+                                    <li>Сохраняется обложка (если указана)</li>
+                                </ol>
+                            </div>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Важно:</strong> Укажите либо артиста, либо группу. Оба поля не могут быть пустыми.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn {
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}

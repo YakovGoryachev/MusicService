@@ -1,0 +1,299 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Альбомы - Музыкальный Сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Заголовок и поиск -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h2">
+                <i class="fas fa-compact-disc me-2"></i>Все альбомы
+            </h1>
+            {% if request.GET.q %}
+                <p class="text-muted">Результаты поиска: "{{ request.GET.q }}"</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <form method="GET" action="{% url 'music:album_list' %}" class="d-flex">
+                <input type="text" class="form-control me-2" name="q" placeholder="Поиск альбомов..." 
+                       value="{{ request.GET.q }}" aria-label="Search">
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-filter me-2"></i>Фильтры
+                    </h6>
+                    <form method="GET" action="{% url 'music:album_list' %}" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="artist" class="form-label">Артист</label>
+                            <select class="form-select" id="artist" name="artist">
+                                <option value="">Все артисты</option>
+                                {% for artist in artists %}
+                                    <option value="{{ artist.name }}" {% if request.GET.artist == artist.name %}selected{% endif %}>
+                                        {{ artist.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="group" class="form-label">Группа</label>
+                            <select class="form-select" id="group" name="group">
+                                <option value="">Все группы</option>
+                                {% for group in groups %}
+                                    <option value="{{ group.name }}" {% if request.GET.group == group.name %}selected{% endif %}>
+                                        {{ group.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sort" class="form-label">Сортировка</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Сначала новые</option>
+                                <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Сначала старые</option>
+                                <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>По названию</option>
+                                <option value="popular" {% if request.GET.sort == 'popular' %}selected{% endif %}>По популярности</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-1"></i>Применить
+                            </button>
+                            <a href="{% url 'music:album_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Сбросить
+                            </a>
+                        </div>
+                        <!-- Сохраняем поисковый запрос -->
+                        {% if request.GET.q %}
+                            <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список альбомов -->
+    <div class="row">
+        {% for album in albums %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    {% if album.photo_url %}
+                        <img src="{{ album.photo_url }}" class="card-img-top" alt="{{ album.name }}" style="height: 250px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 250px;">
+                            <i class="fas fa-compact-disc fa-4x text-white"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ album.name }}</h5>
+                        
+                        <div class="mb-2">
+                            {% if album.artist %}
+                                <p class="card-text mb-1">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        <a href="{% url 'music:artist_detail' album.artist.pk %}" class="text-decoration-none">
+                                            {{ album.artist.name }}
+                                        </a>
+                                    </small>
+                                </p>
+                            {% elif album.group %}
+                                <p class="card-text mb-1">
+                                    <small class="text-muted">
+                                        <i class="fas fa-users me-1"></i>
+                                        <a href="{% url 'music:group_detail' album.group.pk %}" class="text-decoration-none">
+                                            {{ album.group.name }}
+                                        </a>
+                                    </small>
+                                </p>
+                            {% endif %}
+                            
+                            {% if album.release_date %}
+                                <p class="card-text mb-1">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>{{ album.release_date|date:"d.m.Y" }}
+                                    </small>
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-music me-1"></i>{{ album.tracks.count }} треков
+                                </small>
+                            </p>
+                        </div>
+
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-play me-1"></i>{{ album.play_count|default:0 }} прослушиваний
+                                </small>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-star text-warning me-1"></i>
+                                    <small class="text-muted">{{ album.average_rating|default:"0.0"|floatformat:1 }}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'music:album_detail' album.pk %}" class="btn btn-primary flex-fill">
+                                    <i class="fas fa-eye me-1"></i>Просмотр
+                                </a>
+                                {% if user.is_authenticated %}
+                                    <button class="btn btn-outline-primary" onclick="addAlbumToPlaylist('{{ album.pk }}')" title="Добавить все треки в плейлист">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    {% if request.GET.q or request.GET.artist or request.GET.group %}
+                        По вашему запросу ничего не найдено. Попробуйте изменить параметры поиска.
+                    {% else %}
+                        Пока нет альбомов. Будьте первым, кто добавит альбом!
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Пагинация -->
+    {% if albums.has_other_pages %}
+        <nav aria-label="Навигация по страницам" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if albums.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ albums.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.artist %}&artist={{ request.GET.artist }}{% endif %}{% if request.GET.group %}&group={{ request.GET.group }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in albums.paginator.page_range %}
+                    {% if albums.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > albums.number|add:'-3' and num < albums.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.artist %}&artist={{ request.GET.artist }}{% endif %}{% if request.GET.group %}&group={{ request.GET.group }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if albums.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ albums.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.artist %}&artist={{ request.GET.artist }}{% endif %}{% if request.GET.group %}&group={{ request.GET.group }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+
+<!-- Модальное окно для добавления в плейлист -->
+{% if user.is_authenticated %}
+    <div class="modal fade" id="playlistModal" tabindex="-1" aria-labelledby="playlistModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="playlistModalLabel">Добавить все треки в плейлист</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="playlistList">
+                        <!-- Список плейлистов будет загружен через AJAX -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<script>
+function addAlbumToPlaylist(albumId) {
+    // Загружаем список плейлистов пользователя
+    fetch(`/music/api/playlists/`)
+        .then(response => response.json())
+        .then(data => {
+            const playlistList = document.getElementById('playlistList');
+            playlistList.innerHTML = '';
+            
+            if (data.playlists.length === 0) {
+                playlistList.innerHTML = '<p class="text-muted">У вас пока нет плейлистов. <a href="{% url "music:create_playlist" %}">Создать плейлист</a></p>';
+            } else {
+                data.playlists.forEach(playlist => {
+                    const playlistItem = document.createElement('div');
+                    playlistItem.className = 'd-flex justify-content-between align-items-center p-2 border-bottom';
+                    playlistItem.innerHTML = `
+                        <span>${playlist.name}</span>
+                        <button class="btn btn-sm btn-primary" onclick="addAlbumTracksToPlaylist('${albumId}', '${playlist.id}')">
+                            <i class="fas fa-plus me-1"></i>Добавить все
+                        </button>
+                    `;
+                    playlistList.appendChild(playlistItem);
+                });
+            }
+            
+            // Показываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки плейлистов:', error);
+            alert('Ошибка загрузки плейлистов');
+        });
+}
+
+function addAlbumTracksToPlaylist(albumId, playlistId) {
+    fetch(`/music/api/playlists/${playlistId}/add-album/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ album_id: albumId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Все треки альбома добавлены в плейлист!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+            modal.hide();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка добавления треков:', error);
+        alert('Ошибка добавления треков в плейлист');
+    });
+}
+</script>
+{% endblock %}

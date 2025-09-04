@@ -1,137 +1,269 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import MinValueValidator, MaxValueValidator
+import uuid
 
-class Genre(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
 
+class CustomUserManager(BaseUserManager):
+    def create_user(self, login, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(login=login, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, login, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', 'admin')
+        
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+        
+        return self.create_user(login, email, password, **extra_fields)
+
+
+class User(AbstractUser):
+    """Модель пользователя"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    login = models.CharField(max_length=100, unique=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)
+    date_of_birth = models.DateField(null=True, blank=True)
+    registration_date = models.DateTimeField(auto_now_add=True)
+    avatar_url = models.URLField(max_length=500, null=True, blank=True)
+    role = models.CharField(max_length=20, choices=[
+        ('user', 'User'),
+        ('admin', 'Admin'),
+        ('moderator', 'Moderator')
+    ], default='user')
+    
+    objects = CustomUserManager()
+    
+    USERNAME_FIELD = 'login'
+    REQUIRED_FIELDS = ['email']
+    
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.login
+        if not self.first_name:
+            self.first_name = ''
+        if not self.last_name:
+            self.last_name = ''
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        db_table = 'пользователи'
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+    
     def __str__(self):
-        return self.name
-
-class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    description = models.TextField(blank=True)
-
+        return self.login
+    
+    class Meta:
+        db_table = 'пользователи'
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+    
     def __str__(self):
-        return self.name
+        return self.login
+
 
 class Group(models.Model):
-    name_group = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    photo = models.ImageField(upload_to='groups/', null=True, blank=True)
-
+    """Модель музыкальной группы"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200, verbose_name='Название группы')
+    
+    class Meta:
+        db_table = 'группа'
+        verbose_name = 'Группа'
+        verbose_name_plural = 'Группы'
+    
     def __str__(self):
-        return self.name_group
+        return self.name
+
+
+class Artist(models.Model):
+    """Модель артиста"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200, verbose_name='Имя артиста')
+    avatar_url = models.URLField(max_length=500, null=True, blank=True, verbose_name='URL аватара')
+    biography = models.TextField(blank=True, verbose_name='Биография')
+    
+    class Meta:
+        db_table = 'артисты'
+        verbose_name = 'Артист'
+        verbose_name_plural = 'Артисты'
+    
+    def __str__(self):
+        return self.name
+
+
+class ArtistGroup(models.Model):
+    """Связующая таблица между артистами и группами"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, verbose_name='Группа')
+    artist = models.ForeignKey(Artist, on_delete=models.CASCADE, verbose_name='Артист')
+    artist_role = models.CharField(max_length=100, verbose_name='Роль артиста в группе')
+    
+    class Meta:
+        db_table = 'артист_группа'
+        verbose_name = 'Артист в группе'
+        verbose_name_plural = 'Артисты в группах'
+        unique_together = ['group', 'artist']
+    
+    def __str__(self):
+        return f"{self.artist.name} - {self.group.name} ({self.artist_role})"
+
 
 class Album(models.Model):
-    name_album = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    release_date = models.DateField()
-    genre = models.ForeignKey(Genre, on_delete=models.SET_NULL, null=True)
-    photo = models.ImageField(upload_to='albums/', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='albums')
-
-    def __str__(self):
-        return f"{self.name_album} - {self.group.name_group}"
-
-class Composition(models.Model):
-    name_composition = models.CharField(max_length=255)
-    duration = models.IntegerField(help_text="Duration in seconds")
-    genre = models.ForeignKey(Genre, on_delete=models.SET_NULL, null=True)
-    photo = models.ImageField(upload_to='compositions/', null=True, blank=True)
-    reference_on_file = models.FileField(upload_to='music_files/')
-    lyrics = models.TextField(blank=True)
-    date = models.DateTimeField(auto_now_add=True)
-    album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='compositions')
-    tags = models.ManyToManyField(Tag, blank=True)
-
-    def __str__(self):
-        return f"{self.name_composition} - {self.album.group.name_group}"
-
+    """Модель альбома"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200, verbose_name='Название альбома')
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Группа')
+    artist = models.ForeignKey(Artist, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Артист')
+    release_date = models.DateField(verbose_name='Дата выпуска')
+    photo_url = models.URLField(max_length=500, null=True, blank=True, verbose_name='URL фото')
+    play_count = models.PositiveIntegerField(default=0, verbose_name='Количество прослушиваний')
+    
     class Meta:
-        ordering = ['album', 'name_composition']
+        db_table = 'альбомы'
+        verbose_name = 'Альбом'
+        verbose_name_plural = 'Альбомы'
+    
+    def __str__(self):
+        return self.name
+
+
+class Genre(models.Model):
+    """Модель жанра"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True, verbose_name='Название жанра')
+    
+    class Meta:
+        db_table = 'жанры'
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
+    
+    def __str__(self):
+        return self.name
+
+
+class Track(models.Model):
+    """Модель трека"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200, verbose_name='Название трека')
+    album = models.ForeignKey(Album, on_delete=models.CASCADE, verbose_name='Альбом', null=True, blank=True)
+    duration = models.PositiveIntegerField(verbose_name='Продолжительность (в секундах)', null=True, blank=True)
+    file = models.FileField(upload_to='tracks/', verbose_name='Файл трека', null=True, blank=True)
+    play_count = models.PositiveIntegerField(default=0, verbose_name='Количество прослушиваний')
+    genres = models.ManyToManyField(Genre, through='TrackGenre', verbose_name='Жанры')
+    
+    class Meta:
+        db_table = 'трек'
+        verbose_name = 'Трек'
+        verbose_name_plural = 'Треки'
+    
+    def __str__(self):
+        return self.name
+    
+    def get_file_url(self):
+        """Возвращает URL файла для воспроизведения"""
+        if self.file:
+            return self.file.url
+        return None
+
+
+class TrackGenre(models.Model):
+    """Связующая таблица между треками и жанрами"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек')
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE, verbose_name='Жанр')
+    
+    class Meta:
+        db_table = 'треки_жанры'
+        verbose_name = 'Жанр трека'
+        verbose_name_plural = 'Жанры треков'
+        unique_together = ['track', 'genre']
+    
+    def __str__(self):
+        return f"{self.track.name} - {self.genre.name}"
+
 
 class Playlist(models.Model):
-    name_playlist = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    is_public = models.BooleanField(default=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    compositions = models.ManyToManyField(Composition, through='PlaylistComposition')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name_playlist
-
-class PlaylistComposition(models.Model):
-    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE)
-    composition = models.ForeignKey(Composition, on_delete=models.CASCADE)
-    position = models.IntegerField()
-    added_at = models.DateTimeField(auto_now_add=True)
-
+    """Модель плейлиста"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    name = models.CharField(max_length=200, verbose_name='Название плейлиста')
+    description = models.TextField(blank=True, verbose_name='Описание')
+    is_public = models.BooleanField(default=True, verbose_name='Публичный')
+    photo_url = models.URLField(max_length=500, null=True, blank=True, verbose_name='URL фото')
+    creation_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    tracks = models.ManyToManyField(Track, through='PlaylistTrack', verbose_name='Треки')
+    
     class Meta:
-        ordering = ['position']
-        unique_together = ['playlist', 'position']
-
-class ParticipantInfo(models.Model):
-    name = models.CharField(max_length=100)
-    lastname = models.CharField(max_length=100)
-    surname = models.CharField(max_length=100, blank=True)
-    date_birth = models.DateField()
-    photo = models.ImageField(upload_to='participants/', null=True, blank=True)
-    biography = models.TextField(blank=True)
-    groups = models.ManyToManyField(Group, related_name='participants')
-
+        db_table = 'плейлисты'
+        verbose_name = 'Плейлист'
+        verbose_name_plural = 'Плейлисты'
+    
     def __str__(self):
-        return f"{self.name} {self.lastname}"
+        return f"{self.name} ({self.user.login})"
 
-class ParticipantRole(models.Model):
-    name_role = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
 
-    def __str__(self):
-        return self.name_role
-
-class CompositionParticipant(models.Model):
-    composition = models.ForeignKey(Composition, on_delete=models.CASCADE)
-    participant = models.ForeignKey(ParticipantInfo, on_delete=models.CASCADE)
-    role = models.ForeignKey(ParticipantRole, on_delete=models.CASCADE)
-
+class PlaylistTrack(models.Model):
+    """Связующая таблица между плейлистами и треками"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, verbose_name='Плейлист')
+    track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек')
+    added_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления')
+    
     class Meta:
-        unique_together = ['composition', 'participant', 'role']
+        db_table = 'плейлисты_треки'
+        verbose_name = 'Трек в плейлисте'
+        verbose_name_plural = 'Треки в плейлистах'
+        unique_together = ['playlist', 'track']
+    
+    def __str__(self):
+        return f"{self.track.name} в {self.playlist.name}"
 
-class Evaluation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    composition = models.ForeignKey(Composition, on_delete=models.CASCADE)
-    rating = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)]
+
+class Rating(models.Model):
+    """Модель оценки трека"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    value = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name='Оценка'
     )
-    date = models.DateTimeField(auto_now_add=True)
-
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек')
+    
     class Meta:
-        unique_together = ['user', 'composition']
+        db_table = 'оценка'
+        verbose_name = 'Оценка'
+        verbose_name_plural = 'Оценки'
+        unique_together = ['user', 'track']
+    
+    def __str__(self):
+        return f"{self.user.login} оценил {self.track.name} на {self.value}"
 
-class Feedback(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    composition = models.ForeignKey(Composition, on_delete=models.CASCADE)
-    feedback_text = models.TextField()
-    is_moderated = models.BooleanField(default=False)
-    date = models.DateTimeField(auto_now_add=True)
 
-class UserListeningHistory(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    composition = models.ForeignKey(Composition, on_delete=models.CASCADE)
-    listened_at = models.DateTimeField(auto_now_add=True)
-    duration_listened = models.IntegerField(help_text="Duration listened in seconds")
-
-class UserFollower(models.Model):
-    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
-    following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
+class Comment(models.Model):
+    """Модель комментария к треку"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек')
+    text = models.TextField(verbose_name='Текст комментария')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    
     class Meta:
-        unique_together = ['follower', 'following']
+        db_table = 'комментарий'
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Комментарий {self.user.login} к {self.track.name}"

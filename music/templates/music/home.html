@@ -1,94 +1,203 @@
 {% extends 'music/base.html' %}
 
-{% block title %}Главная - Музыкальный сервис{% endblock %}
+{% block title %}Главная - Музыкальный Сервис{% endblock %}
 
 {% block content %}
+<!-- Hero секция -->
+<section class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-4">
+            <i class="fas fa-music me-3"></i>Добро пожаловать в мир музыки
+        </h1>
+        <p class="lead mb-4">Откройте для себя новые треки, создавайте плейлисты и делитесь музыкой с друзьями</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'music:track_list' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-play me-2"></i>Слушать музыку
+            </a>
+            {% if not user.is_authenticated %}
+                <a href="{% url 'music:register' %}" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Зарегистрироваться
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
 <div class="container">
-    <!-- Последние композиции -->
+    <!-- Поиск -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8">
+            <form method="GET" action="{% url 'music:track_list' %}" class="search-form">
+                <div class="input-group input-group-lg">
+                    <input type="text" class="form-control" name="q" placeholder="Поиск по трекам, альбомам, артистам..." 
+                           value="{{ request.GET.q }}" aria-label="Search">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Последние треки -->
     <section class="mb-5">
-        <h2 class="mb-4">Новые композиции</h2>
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-            {% for composition in latest_compositions %}
-            <div class="col">
-                <div class="card h-100">
-                    {% if composition.photo %}
-                        <img src="{{ composition.photo.url }}" class="card-img-top" alt="{{ composition.name_composition }}">
-                    {% else %}
-                        <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
-                            <i class="bi bi-music-note" style="font-size: 2rem;"></i>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3">
+                <i class="fas fa-clock me-2"></i>Последние треки
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'music:track_list' %}" class="btn btn-outline-primary">
+                    Все треки <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+                {% if user.is_authenticated and user.role == 'admin' %}
+                    <a href="{% url 'music:admin_create_track' %}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Добавить трек
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            {% for track in latest_tracks %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <div class="card h-100">
+                        {% if track.album.photo_url %}
+                            <img src="{{ track.album.photo_url }}" class="card-img-top" alt="{{ track.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-music fa-3x text-white"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{ track.name }}</h5>
+                            <p class="card-text text-muted">
+                                {% if track.album.artist %}
+                                    {{ track.album.artist.name }}
+                                {% elif track.album.group %}
+                                    {{ track.album.group.name }}
+                                {% endif %}
+                            </p>
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{ track.duration|floatformat:0 }}с
+                                    </small>
+                                    <a href="{% url 'music:track_detail' track.pk %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-play me-1"></i>Слушать
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ composition.name_composition }}</h5>
-                        <p class="card-text">
-                            {% if composition.album %}
-                                <small class="text-muted">Альбом: {{ composition.album }}</small><br>
-                            {% endif %}
-                            <small class="text-muted">Жанр: {{ composition.genre|default:"Не указан" }}</small>
-                        </p>
-                        <a href="{% url 'music:composition_detail' composition.id %}" class="btn btn-primary">Слушать</a>
                     </div>
                 </div>
-            </div>
             {% empty %}
-            <div class="col-12">
-                <p class="text-center">Нет доступных композиций.</p>
-            </div>
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Пока нет треков. Будьте первым, кто добавит музыку!
+                    </div>
+                </div>
             {% endfor %}
         </div>
     </section>
 
     <!-- Популярные альбомы -->
     <section class="mb-5">
-        <h2 class="mb-4">Популярные альбомы</h2>
-        <div class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3">
+                <i class="fas fa-fire me-2"></i>Популярные альбомы
+            </h2>
+            <a href="{% url 'music:album_list' %}" class="btn btn-outline-primary">
+                Все альбомы <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+        
+        <div class="row">
             {% for album in popular_albums %}
-            <div class="col">
-                <div class="card h-100">
-                    {% if album.photo %}
-                        <img src="{{ album.photo.url }}" class="card-img-top" alt="{{ album.name_album }}">
-                    {% else %}
-                        <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
-                            <i class="bi bi-disc" style="font-size: 2rem;"></i>
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <div class="card h-100">
+                        {% if album.photo_url %}
+                            <img src="{{ album.photo_url }}" class="card-img-top" alt="{{ album.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-compact-disc fa-3x text-white"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{ album.name }}</h5>
+                            <p class="card-text text-muted">
+                                {% if album.artist %}
+                                    {{ album.artist.name }}
+                                {% elif album.group %}
+                                    {{ album.group.name }}
+                                {% endif %}
+                            </p>
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-play me-1"></i>{{ album.play_count }} прослушиваний
+                                    </small>
+                                    <a href="{% url 'music:album_detail' album.pk %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Просмотр
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ album.name_album }}</h5>
-                        <p class="card-text">
-                            <small class="text-muted">Жанр: {{ album.genre|default:"Не указан" }}</small><br>
-                            <small class="text-muted">Дата выхода: {{ album.release_date }}</small>
-                        </p>
-                        <a href="#" class="btn btn-primary">Подробнее</a>
                     </div>
                 </div>
-            </div>
             {% empty %}
-            <div class="col-12">
-                <p class="text-center">Нет доступных альбомов.</p>
-            </div>
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Пока нет альбомов. Будьте первым, кто добавит альбом!
+                    </div>
+                </div>
             {% endfor %}
         </div>
     </section>
 
     <!-- Жанры -->
     <section class="mb-5">
-        <h2 class="mb-4">Жанры</h2>
-        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3">
+                <i class="fas fa-tags me-2"></i>Жанры
+            </h2>
+        </div>
+        
+        <div class="row">
             {% for genre in genres %}
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ genre.name }}</h5>
-                        <a href="#" class="btn btn-outline-primary btn-sm">Показать все</a>
+                <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-3">
+                    <a href="{% url 'music:track_list' %}?genre={{ genre.name }}" class="text-decoration-none">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-music fa-2x text-primary mb-2"></i>
+                                <h6 class="card-title">{{ genre.name }}</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Пока нет жанров. Будьте первым, кто добавит жанр!
                     </div>
                 </div>
-            </div>
-            {% empty %}
-            <div class="col-12">
-                <p class="text-center">Нет доступных жанров.</p>
-            </div>
             {% endfor %}
         </div>
     </section>
+
+    <!-- Призыв к действию -->
+    {% if not user.is_authenticated %}
+        <section class="text-center py-5 bg-light rounded-3 mb-5">
+            <h3 class="mb-3">Присоединяйтесь к нашему музыкальному сообществу!</h3>
+            <p class="lead mb-4">Создавайте плейлисты, оценивайте треки и делитесь музыкой с друзьями</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'music:register' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Зарегистрироваться
+                </a>
+                <a href="{% url 'music:login' %}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Войти
+                </a>
+            </div>
+        </section>
+    {% endif %}
 </div>
 {% endblock %} 

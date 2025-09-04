@@ -1,0 +1,434 @@
+{% extends 'music/base.html' %}
+
+{% block title %}{{ track.name }} - Музыкальный Сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Информация о треке -->
+    <div class="row mb-5">
+        <div class="col-lg-4 col-md-5 mb-4">
+            {% if track.album.photo_url %}
+                <img src="{{ track.album.photo_url }}" class="img-fluid rounded shadow" alt="{{ track.name }}">
+            {% else %}
+                <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 300px;">
+                    <i class="fas fa-music fa-5x text-white"></i>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-8 col-md-7">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="h2 mb-2">{{ track.name }}</h1>
+                    {% if track.album %}
+                        <p class="lead mb-2">
+                            <i class="fas fa-compact-disc me-2"></i>
+                            <a href="{% url 'music:album_detail' track.album.pk %}" class="text-decoration-none">
+                                {{ track.album.name }}
+                            </a>
+                        </p>
+                    {% endif %}
+                    
+                    {% if track.album.artist %}
+                        <p class="h5 mb-2">
+                            <i class="fas fa-user me-2"></i>
+                            <a href="{% url 'music:artist_detail' track.album.artist.pk %}" class="text-decoration-none">
+                                {{ track.album.artist.name }}
+                            </a>
+                        </p>
+                    {% elif track.album.group %}
+                        <p class="h5 mb-2">
+                            <i class="fas fa-users me-2"></i>
+                            <a href="{% url 'music:group_detail' track.album.group.pk %}" class="text-decoration-none">
+                                {{ track.album.group.name }}
+                            </a>
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <div class="text-end">
+                    <div class="mb-2">
+                        <span class="h4 text-warning">
+                            <i class="fas fa-star"></i> {{ track.average_rating|default:"0.0"|floatformat:1 }}
+                        </span>
+                        <small class="text-muted d-block">({{ track.ratings.count }} оценок)</small>
+                    </div>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="rating-buttons mb-2">
+                            {% for i in "12345" %}
+                                <button class="btn btn-sm btn-outline-warning rating-btn" data-rating="{{ i }}" 
+                                        onclick="rateTrack('{{ track.pk }}', {{ i }})">
+                                    {{ i }}
+                                </button>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>Длительность:</strong> {{ track.duration|floatformat:0 }} секунд
+                    </p>
+                    {% if track.album.release_date %}
+                        <p class="mb-2">
+                            <i class="fas fa-calendar me-2"></i>
+                            <strong>Дата выхода:</strong> {{ track.album.release_date|date:"d.m.Y" }}
+                        </p>
+                    {% endif %}
+                    {% if track.file %}
+                        <p class="mb-2">
+                            <i class="fas fa-music me-2"></i>
+                            <strong>Файл:</strong> 
+                            <a href="{{ track.file.url }}" target="_blank" class="text-decoration-none">
+                                Слушать <i class="fas fa-external-link-alt ms-1"></i>
+                            </a>
+                        </p>
+                        
+                        <!-- Аудиоплеер -->
+                        <div class="audio-player-container mb-3">
+                            <audio id="audio-player" controls class="w-100">
+                                <source src="{{ track.file.url }}" type="audio/mpeg">
+                                <source src="{{ track.file.url }}" type="audio/ogg">
+                                <source src="{{ track.file.url }}" type="audio/wav">
+                                Ваш браузер не поддерживает аудио элемент.
+                            </audio>
+                        </div>
+                        
+                        <!-- Кнопки управления -->
+                        <div class="audio-controls mb-3">
+                            <button class="btn btn-primary me-2" onclick="playTrack()">
+                                <i class="fas fa-play"></i> Воспроизвести
+                            </button>
+                            <button class="btn btn-secondary me-2" onclick="pauseTrack()">
+                                <i class="fas fa-pause"></i> Пауза
+                            </button>
+                            <button class="btn btn-info me-2" onclick="stopTrack()">
+                                <i class="fas fa-stop"></i> Стоп
+                            </button>
+                            <button class="btn btn-success me-2" onclick="downloadTrack()">
+                                <i class="fas fa-download"></i> Скачать
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    {% if track.genres.all %}
+                        <p class="mb-2">
+                            <i class="fas fa-tags me-2"></i>
+                            <strong>Жанры:</strong>
+                        </p>
+                        <div class="mb-2">
+                            {% for genre in track.genres.all %}
+                                <span class="badge bg-primary me-1">{{ genre.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-primary btn-lg" onclick="playTrack()">
+                    <i class="fas fa-play me-2"></i>Слушать
+                </button>
+                
+                {% if user.is_authenticated %}
+                    <button class="btn btn-outline-primary" onclick="addToPlaylist('{{ track.pk }}')">
+                        <i class="fas fa-plus me-2"></i>В плейлист
+                    </button>
+                    
+                    <button class="btn btn-outline-success" onclick="toggleFavorite()">
+                        <i class="fas fa-heart me-2"></i>В избранное
+                    </button>
+                    
+                    <button class="btn btn-outline-info" onclick="shareTrack()">
+                        <i class="fas fa-share me-2"></i>Поделиться
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Комментарии -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">
+                        <i class="fas fa-comments me-2"></i>Комментарии ({{ track.comments.count }})
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                        <form method="POST" action="{% url 'music:add_comment' track.pk %}" class="mb-4">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="comment_text" class="form-label">Добавить комментарий</label>
+                                <textarea class="form-control" id="comment_text" name="text" rows="3" 
+                                          placeholder="Поделитесь своими мыслями о треке..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Отправить
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <a href="{% url 'music:login' %}">Войдите</a>, чтобы оставить комментарий
+                        </div>
+                    {% endif %}
+                    
+                    <div id="comments-section">
+                        {% for comment in track.comments.all %}
+                            <div class="comment mb-3 p-3 border rounded">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 32px; height: 32px;">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ comment.user.login }}</strong>
+                                            <small class="text-muted d-block">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if user == comment.user %}
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteComment('{{ comment.pk }}')" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                
+                                <p class="mb-0">{{ comment.text }}</p>
+                            </div>
+                        {% empty %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-comments fa-2x mb-2"></i>
+                                <p>Пока нет комментариев. Будьте первым!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для добавления в плейлист -->
+{% if user.is_authenticated %}
+    <div class="modal fade" id="playlistModal" tabindex="-1" aria-labelledby="playlistModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="playlistModalLabel">Добавить в плейлист</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="playlistList">
+                        <!-- Список плейлистов будет загружен через AJAX -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<script>
+function playTrack() {
+    // Здесь можно добавить логику воспроизведения
+    alert('Воспроизведение трека: {{ track.name }}');
+}
+
+function rateTrack(trackId, rating) {
+    fetch(`/music/api/tracks/${trackId}/rate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ rating: rating })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Обновляем отображение рейтинга
+            location.reload();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка оценки:', error);
+        alert('Ошибка при оценке трека');
+    });
+}
+
+function addToPlaylist(trackId) {
+    // Загружаем список плейлистов пользователя
+    fetch(`/music/api/playlists/`)
+        .then(response => response.json())
+        .then(data => {
+            const playlistList = document.getElementById('playlistList');
+            playlistList.innerHTML = '';
+            
+            if (data.playlists.length === 0) {
+                playlistList.innerHTML = '<p class="text-muted">У вас пока нет плейлистов. <a href="{% url "music:create_playlist" %}">Создать плейлист</a></p>';
+            } else {
+                data.playlists.forEach(playlist => {
+                    const playlistItem = document.createElement('div');
+                    playlistItem.className = 'd-flex justify-content-between align-items-center p-2 border-bottom';
+                    playlistItem.innerHTML = `
+                        <span>${playlist.name}</span>
+                        <button class="btn btn-sm btn-primary" onclick="addTrackToPlaylist('${trackId}', '${playlist.id}')">
+                            <i class="fas fa-plus me-1"></i>Добавить
+                        </button>
+                    `;
+                    playlistList.appendChild(playlistItem);
+                });
+            }
+            
+            // Показываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки плейлистов:', error);
+            alert('Ошибка загрузки плейлистов');
+        });
+}
+
+function addTrackToPlaylist(trackId, playlistId) {
+    fetch(`/music/api/playlists/${playlistId}/add-track/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ track_id: trackId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Трек добавлен в плейлист!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+            modal.hide();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка добавления трека:', error);
+        alert('Ошибка добавления трека в плейлист');
+    });
+}
+
+function toggleFavorite() {
+    // Здесь можно добавить логику добавления/удаления из избранного
+    alert('Функция "В избранное" будет добавлена позже');
+}
+
+function shareTrack() {
+    // Копируем ссылку в буфер обмена
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('Ссылка скопирована в буфер обмена!');
+    }).catch(() => {
+        // Fallback для старых браузеров
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Ссылка скопирована в буфер обмена!');
+    });
+}
+
+function deleteComment(commentId) {
+    if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+        fetch(`/music/api/comments/${commentId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка удаления комментария:', error);
+            alert('Ошибка при удалении комментария');
+        });
+    }
+}
+
+// Функции управления аудио
+function playTrack() {
+    const audio = document.getElementById('audio-player');
+    if (audio) {
+        audio.play();
+    }
+}
+
+function pauseTrack() {
+    const audio = document.getElementById('audio-player');
+    if (audio) {
+        audio.pause();
+    }
+}
+
+function stopTrack() {
+    const audio = document.getElementById('audio-player');
+    if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+    }
+}
+
+function downloadTrack() {
+    const audio = document.getElementById('audio-player');
+    if (audio && audio.src) {
+        const link = document.createElement('a');
+        link.href = audio.src;
+        link.download = '{{ track.name }}.mp3';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+
+// Автоматическое воспроизведение при загрузке страницы (опционально)
+document.addEventListener('DOMContentLoaded', function() {
+    const audio = document.getElementById('audio-player');
+    if (audio) {
+        // Добавляем обработчики событий для отслеживания прогресса
+        audio.addEventListener('play', function() {
+            console.log('Трек начал воспроизводиться');
+        });
+        
+        audio.addEventListener('ended', function() {
+            console.log('Трек закончился');
+        });
+        
+        audio.addEventListener('error', function() {
+            console.error('Ошибка воспроизведения аудио');
+        });
+    }
+});
+</script>
+{% endblock %}

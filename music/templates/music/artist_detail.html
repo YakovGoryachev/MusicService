@@ -1,0 +1,490 @@
+{% extends 'music/base.html' %}
+
+{% block title %}{{ artist.name }} - Музыкальный Сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Информация об артисте -->
+    <div class="row mb-5">
+        <div class="col-lg-4 col-md-5 mb-4">
+            {% if artist.photo_url %}
+                <img src="{{ artist.photo_url }}" class="img-fluid rounded shadow" alt="{{ artist.name }}">
+            {% else %}
+                <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
+                    <i class="fas fa-user fa-5x text-white"></i>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-8 col-md-7">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="h2 mb-2">{{ artist.name }}</h1>
+                    
+                    {% if artist.bio %}
+                        <p class="lead mb-3">{{ artist.bio }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="text-end">
+                    <div class="mb-2">
+                        <span class="h4 text-warning">
+                            <i class="fas fa-star"></i> {{ artist.average_rating|default:"0.0"|floatformat:1 }}
+                        </span>
+                        <small class="text-muted d-block">({{ artist.ratings.count }} оценок)</small>
+                    </div>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="rating-buttons mb-2">
+                            {% for i in "12345" %}
+                                <button class="btn btn-sm btn-outline-warning rating-btn" data-rating="{{ i }}" 
+                                        onclick="rateArtist('{{ artist.pk }}', {{ i }})">
+                                    {{ i }}
+                                </button>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <i class="fas fa-compact-disc me-2"></i>
+                        <strong>Альбомов:</strong> {{ artist.albums.count }}
+                    </p>
+                    
+                    <p class="mb-2">
+                        <i class="fas fa-music me-2"></i>
+                        <strong>Треков:</strong> {{ artist.tracks.count }}
+                    </p>
+                    
+                    <p class="mb-2">
+                        <i class="fas fa-play me-2"></i>
+                        <strong>Прослушиваний:</strong> {{ artist.play_count|default:0 }}
+                    </p>
+                </div>
+                
+                <div class="col-md-6">
+                    {% if artist.genres.all %}
+                        <p class="mb-2">
+                            <i class="fas fa-tags me-2"></i>
+                            <strong>Основные жанры:</strong>
+                        </p>
+                        <div class="mb-2">
+                            {% for genre in artist.genres.all %}
+                                <span class="badge bg-primary me-1">{{ genre.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-primary btn-lg" onclick="playArtistTracks()">
+                    <i class="fas fa-play me-2"></i>Слушать все треки
+                </button>
+                
+                {% if user.is_authenticated %}
+                    <button class="btn btn-outline-primary" onclick="followArtist('{{ artist.pk }}')">
+                        <i class="fas fa-heart me-2"></i>Подписаться
+                    </button>
+                    
+                    <button class="btn btn-outline-success" onclick="addArtistToPlaylist('{{ artist.pk }}')">
+                        <i class="fas fa-plus me-2"></i>В плейлист
+                    </button>
+                    
+                    <button class="btn btn-outline-info" onclick="shareArtist()">
+                        <i class="fas fa-share me-2"></i>Поделиться
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Альбомы артиста -->
+    {% if artist.albums.all %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="h4">
+                        <i class="fas fa-compact-disc me-2"></i>Альбомы ({{ artist.albums.count }})
+                    </h3>
+                    <a href="{% url 'music:album_list' %}?artist={{ artist.name }}" class="btn btn-outline-primary">
+                        Все альбомы <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                
+                <div class="row">
+                    {% for album in artist.albums.all %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                            <div class="card h-100">
+                                {% if album.photo_url %}
+                                    <img src="{{ album.photo_url }}" class="card-img-top" alt="{{ album.name }}" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fas fa-compact-disc fa-3x text-white"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="card-body d-flex flex-column">
+                                    <h6 class="card-title">{{ album.name }}</h6>
+                                    
+                                    {% if album.release_date %}
+                                        <p class="card-text mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>{{ album.release_date|date:"d.m.Y" }}
+                                            </small>
+                                        </p>
+                                    {% endif %}
+                                    
+                                    <p class="card-text mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-music me-1"></i>{{ album.tracks.count }} треков
+                                        </small>
+                                    </p>
+                                    
+                                    <div class="mt-auto">
+                                        <a href="{% url 'music:album_detail' album.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="fas fa-eye me-1"></i>Просмотр
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Популярные треки -->
+    {% if artist.tracks.all %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="h4">
+                        <i class="fas fa-music me-2"></i>Популярные треки ({{ artist.tracks.count }})
+                    </h3>
+                    <a href="{% url 'music:track_list' %}?artist={{ artist.name }}" class="btn btn-outline-primary">
+                        Все треки <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width: 50px;">#</th>
+                                        <th scope="col">Название</th>
+                                        <th scope="col">Альбом</th>
+                                        <th scope="col" style="width: 120px;">Длительность</th>
+                                        <th scope="col" style="width: 100px;">Рейтинг</th>
+                                        <th scope="col" style="width: 150px;">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for track in artist.tracks.all|slice:":10" %}
+                                        <tr>
+                                            <td class="align-middle">{{ forloop.counter }}</td>
+                                            <td class="align-middle">
+                                                <div>
+                                                    <strong>{{ track.name }}</strong>
+                                                    {% if track.genres.all %}
+                                                        <div class="mt-1">
+                                                            {% for genre in track.genres.all %}
+                                                                <span class="badge bg-secondary me-1">{{ genre.name }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                {% if track.album %}
+                                                    <a href="{% url 'music:album_detail' track.album.pk %}" class="text-decoration-none">
+                                                        {{ track.album.name }}
+                                                    </a>
+                                                {% else %}
+                                                    <span class="text-muted">Без альбома</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="align-middle">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>{{ track.duration|floatformat:0 }}с
+                                                </small>
+                                            </td>
+                                            <td class="align-middle">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-star text-warning me-1"></i>
+                                                    <small class="text-muted">{{ track.average_rating|default:"0.0"|floatformat:1 }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                <div class="d-flex gap-1">
+                                                    <a href="{% url 'music:track_detail' track.pk %}" class="btn btn-sm btn-primary" title="Просмотр">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="playTrack('{{ track.pk }}')" title="Слушать">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                    {% if user.is_authenticated %}
+                                                        <button class="btn btn-sm btn-outline-success" onclick="addTrackToPlaylist('{{ track.pk }}')" title="В плейлист">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Похожие артисты -->
+    {% if similar_artists %}
+        <div class="row mt-5">
+            <div class="col-12">
+                <h3 class="h4 mb-4">
+                    <i class="fas fa-thumbs-up me-2"></i>Похожие артисты
+                </h3>
+                
+                <div class="row">
+                    {% for similar_artist in similar_artists %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                            <div class="card h-100">
+                                {% if similar_artist.photo_url %}
+                                    <img src="{{ similar_artist.photo_url }}" class="card-img-top" alt="{{ similar_artist.name }}" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fas fa-user fa-3x text-white"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="card-body d-flex flex-column">
+                                    <h6 class="card-title">{{ similar_artist.name }}</h6>
+                                    
+                                    <p class="card-text mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-music me-1"></i>{{ similar_artist.tracks.count }} треков
+                                        </small>
+                                    </p>
+                                    
+                                    <div class="mt-auto">
+                                        <a href="{% url 'music:artist_detail' similar_artist.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="fas fa-eye me-1"></i>Профиль
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно для добавления в плейлист -->
+{% if user.is_authenticated %}
+    <div class="modal fade" id="playlistModal" tabindex="-1" aria-labelledby="playlistModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="playlistModalLabel">Добавить все треки в плейлист</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="playlistList">
+                        <!-- Список плейлистов будет загружен через AJAX -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<script>
+function playArtistTracks() {
+    // Здесь можно добавить логику воспроизведения всех треков артиста
+    alert('Воспроизведение всех треков артиста: {{ artist.name }}');
+}
+
+function playTrack(trackId) {
+    // Здесь можно добавить логику воспроизведения отдельного трека
+    alert('Воспроизведение трека');
+}
+
+function rateArtist(artistId, rating) {
+    fetch(`/music/api/artists/${artistId}/rate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ rating: rating })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Обновляем отображение рейтинга
+            location.reload();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка оценки:', error);
+        alert('Ошибка при оценке артиста');
+    });
+}
+
+function followArtist(artistId) {
+    // Здесь можно добавить логику подписки на артиста
+    alert('Функция "Подписаться на артиста" будет добавлена позже');
+}
+
+function addArtistToPlaylist(artistId) {
+    // Загружаем список плейлистов пользователя
+    fetch(`/music/api/playlists/`)
+        .then(response => response.json())
+        .then(data => {
+            const playlistList = document.getElementById('playlistList');
+            playlistList.innerHTML = '';
+            
+            if (data.playlists.length === 0) {
+                playlistList.innerHTML = '<p class="text-muted">У вас пока нет плейлистов. <a href="{% url "music:create_playlist" %}">Создать плейлист</a></p>';
+            } else {
+                data.playlists.forEach(playlist => {
+                    const playlistItem = document.createElement('div');
+                    playlistItem.className = 'd-flex justify-content-between align-items-center p-2 border-bottom';
+                    playlistItem.innerHTML = `
+                        <span>${playlist.name}</span>
+                        <button class="btn btn-sm btn-primary" onclick="addArtistTracksToPlaylist('${artistId}', '${playlist.id}')">
+                            <i class="fas fa-plus me-1"></i>Добавить все
+                        </button>
+                    `;
+                    playlistList.appendChild(playlistItem);
+                });
+            }
+            
+            // Показываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки плейлистов:', error);
+            alert('Ошибка загрузки плейлистов');
+        });
+}
+
+function addArtistTracksToPlaylist(artistId, playlistId) {
+    fetch(`/music/api/playlists/${playlistId}/add-artist/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ artist_id: artistId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Все треки артиста добавлены в плейлист!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+            modal.hide();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка добавления треков:', error);
+        alert('Ошибка добавления треков в плейлист');
+    });
+}
+
+function addTrackToPlaylist(trackId) {
+    // Загружаем список плейлистов пользователя
+    fetch(`/music/api/playlists/`)
+        .then(response => response.json())
+        .then(data => {
+            const playlistList = document.getElementById('playlistList');
+            playlistList.innerHTML = '';
+            
+            if (data.playlists.length === 0) {
+                playlistList.innerHTML = '<p class="text-muted">У вас пока нет плейлистов. <a href="{% url "music:create_playlist" %}">Создать плейлист</a></p>';
+            } else {
+                data.playlists.forEach(playlist => {
+                    const playlistItem = document.createElement('div');
+                    playlistItem.className = 'd-flex justify-content-between align-items-center p-2 border-bottom';
+                    playlistItem.innerHTML = `
+                        <span>${playlist.name}</span>
+                        <button class="btn btn-sm btn-primary" onclick="addSingleTrackToPlaylist('${trackId}', '${playlist.id}')">
+                            <i class="fas fa-plus me-1"></i>Добавить
+                        </button>
+                    `;
+                    playlistList.appendChild(playlistItem);
+                });
+            }
+            
+            // Показываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки плейлистов:', error);
+            alert('Ошибка загрузки плейлистов');
+        });
+}
+
+function addSingleTrackToPlaylist(trackId, playlistId) {
+    fetch(`/music/api/playlists/${playlistId}/add-track/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ track_id: trackId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Трек добавлен в плейлист!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+            modal.hide();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка добавления трека:', error);
+        alert('Ошибка добавления трека в плейлист');
+    });
+}
+
+function shareArtist() {
+    // Копируем ссылку в буфер обмена
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('Ссылка скопирована в буфер обмена!');
+    }).catch(() => {
+        // Fallback для старых браузеров
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Ссылка скопирована в буфер обмена!');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Регистрация - Музыкальный Сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow">
+                <div class="card-header text-center bg-primary text-white">
+                    <h2 class="h3 mb-0">
+                        <i class="fas fa-user-plus me-2"></i>Регистрация
+                    </h2>
+                    <p class="mb-0 mt-2">Создайте аккаунт и присоединяйтесь к музыкальному сообществу</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.login.id_for_label }}" class="form-label">
+                                <i class="fas fa-user me-2"></i>Логин *
+                            </label>
+                            {{ form.login }}
+                            {% if form.login.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.login.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Уникальное имя пользователя для входа в систему</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>Email *
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Ваш email адрес для восстановления пароля</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                <i class="fas fa-id-card me-2"></i>Имя
+                            </label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.first_name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                <i class="fas fa-id-card me-2"></i>Фамилия
+                            </label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.last_name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.password1.id_for_label }}" class="form-label">
+                                <i class="fas fa-lock me-2"></i>Пароль *
+                            </label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.password1.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <ul class="mb-0 mt-2">
+                                    <li>Минимум 8 символов</li>
+                                    <li>Не должен быть слишком простым</li>
+                                    <li>Не должен состоять только из цифр</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.password2.id_for_label }}" class="form-label">
+                                <i class="fas fa-lock me-2"></i>Подтверждение пароля *
+                            </label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.password2.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Повторите пароль для подтверждения</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    Я согласен с <a href="#" class="text-decoration-none">условиями использования</a> и 
+                                    <a href="#" class="text-decoration-none">политикой конфиденциальности</a>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Создать аккаунт
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-0">Уже есть аккаунт? 
+                            <a href="{% url 'music:login' %}" class="text-decoration-none">
+                                <i class="fas fa-sign-in-alt me-1"></i>Войти
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Преимущества регистрации -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">
+                        <i class="fas fa-star me-2"></i>Преимущества регистрации
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-playlist text-primary fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1">Создавайте плейлисты</h6>
+                                    <small class="text-muted">Сохраняйте любимые треки в коллекции</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-heart text-danger fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1">Любимые треки</h6>
+                                    <small class="text-muted">Отмечайте понравившуюся музыку</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-comments text-success fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1">Комментарии</h6>
+                                    <small class="text-muted">Делитесь мнением о треках</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-star text-warning fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1">Рейтинги</h6>
+                                    <small class="text-muted">Оценивайте музыку по 5-балльной шкале</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border-radius: 1rem;
+    border: none;
+}
+
+.card-header {
+    border-radius: 1rem 1rem 0 0 !important;
+    border: none;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.shadow {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.fa-2x {
+    font-size: 1.5rem;
+}
+
+hr {
+    opacity: 0.25;
+}
+</style>
+{% endblock %}

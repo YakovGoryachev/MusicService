@@ -1,0 +1,179 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Создать группу - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Основной контент без боковой панели -->
+        <main class="col-12 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">
+                    <i class="fas fa-plus me-2"></i>Создать новую группу
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'music:admin_groups' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+
+            <!-- Форма создания группы -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-edit me-2"></i>Информация о группе
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <!-- Основная информация о группе -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">
+                                        <i class="fas fa-users me-2"></i>Название группы
+                                    </label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+
+                                <!-- Описание группы -->
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">
+                                        <i class="fas fa-file-text me-2"></i>Описание группы
+                                    </label>
+                                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="Расскажите о группе..."></textarea>
+                                    <div class="form-text">Описание группы, история, стиль (необязательно)</div>
+                                </div>
+
+                                <!-- Фото группы -->
+                                <div class="mb-3">
+                                    <label for="photo_url" class="form-label">
+                                        <i class="fas fa-image me-2"></i>URL фото группы
+                                    </label>
+                                    <input type="url" class="form-control" id="photo_url" name="photo_url" placeholder="https://example.com/group-photo.jpg">
+                                    <div class="form-text">Ссылка на изображение (необязательно)</div>
+                                </div>
+
+                                <!-- Жанры -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-tags me-2"></i>Жанры
+                                    </label>
+                                    <div class="row">
+                                        {% for genre in genres %}
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="genres" value="{{ genre.id }}" id="genre_{{ genre.id }}">
+                                                    <label class="form-check-label" for="genre_{{ genre.id }}">
+                                                        {{ genre.name }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Выберите жанры, в которых работает группа</div>
+                                </div>
+
+                                <!-- Кнопки -->
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Создать группу
+                                    </button>
+                                    <a href="{% url 'music:admin_groups' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Отмена
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Информационная панель -->
+                <div class="col-lg-4">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">
+                                <i class="fas fa-info-circle me-2"></i>Как это работает
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-lightbulb me-2"></i>Создание группы
+                                </h6>
+                                <p class="small text-muted">
+                                    Группа может состоять из нескольких артистов. 
+                                    После создания группы можно будет создавать альбомы и треки.
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-success">
+                                    <i class="fas fa-check-circle me-2"></i>Что происходит при создании
+                                </h6>
+                                <ol class="small text-muted">
+                                    <li>Создается запись группы</li>
+                                    <li>Добавляются выбранные жанры</li>
+                                    <li>Сохраняется фото (если указано)</li>
+                                    <li>Группа становится доступна для создания альбомов</li>
+                                </ol>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Совет:</strong> После создания группы вы сможете создавать альбомы и треки от её имени.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn {
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}

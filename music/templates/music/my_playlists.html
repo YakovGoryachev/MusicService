@@ -1,0 +1,199 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Мои плейлисты - Музыкальный Сервис{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Заголовок и кнопка создания -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h2">
+                <i class="fas fa-heart me-2"></i>Мои плейлисты
+            </h1>
+            <p class="text-muted">Управляйте своими музыкальными коллекциями</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'music:create_playlist' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Создать плейлист
+            </a>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 class="text-primary mb-1">{{ playlists.count }}</h4>
+                                <small class="text-muted">Всего плейлистов</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 class="text-success mb-1">{{ total_tracks }}</h4>
+                                <small class="text-muted">Всего треков</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 class="text-info mb-1">{{ total_duration|floatformat:0 }}</h4>
+                                <small class="text-muted">Общая длительность (сек)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="text-warning mb-1">{{ total_play_count|default:0 }}</h4>
+                            <small class="text-muted">Общих прослушиваний</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список плейлистов -->
+    <div class="row">
+        {% for playlist in playlists %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    {% if playlist.photo_url %}
+                        <img src="{{ playlist.photo_url }}" class="card-img-top" alt="{{ playlist.name }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="fas fa-playlist fa-4x text-white"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ playlist.name }}</h5>
+                        
+                        <div class="mb-2">
+                            {% if playlist.description %}
+                                <p class="card-text text-muted">
+                                    {{ playlist.description|truncatewords:15 }}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h6 class="mb-0">{{ playlist.tracks.count }}</h6>
+                                        <small class="text-muted">Треков</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h6 class="mb-0">{{ playlist.play_count|default:0 }}</h6>
+                                    <small class="text-muted">Просмотров</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>{{ playlist.creation_date|date:"d.m.Y" }}
+                                </small>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-star text-warning me-1"></i>
+                                    <small class="text-muted">{{ playlist.average_rating|default:"0.0"|floatformat:1 }}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'music:playlist_detail' playlist.pk %}" class="btn btn-primary flex-fill">
+                                    <i class="fas fa-eye me-1"></i>Просмотр
+                                </a>
+                                <button class="btn btn-outline-primary" onclick="playPlaylist('{{ playlist.pk }}')" title="Слушать">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <a href="{% url 'music:edit_playlist' playlist.pk %}" class="btn btn-outline-warning" title="Редактировать">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-outline-danger" onclick="deletePlaylist('{{ playlist.pk }}')" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <p class="mb-3">У вас пока нет плейлистов. Создайте свой первый плейлист!</p>
+                    <a href="{% url 'music:create_playlist' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Создать плейлист
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Быстрые действия -->
+    {% if playlists %}
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="h5 mb-0">
+                            <i class="fas fa-bolt me-2"></i>Быстрые действия
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <button class="btn btn-outline-primary w-100" onclick="playAllPlaylists()">
+                                    <i class="fas fa-play me-2"></i>Слушать все плейлисты
+                                </button>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <button class="btn btn-outline-success w-100" onclick="exportPlaylists()">
+                                    <i class="fas fa-download me-2"></i>Экспорт плейлистов
+                                </button>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <button class="btn btn-outline-info w-100" onclick="shareAllPlaylists()">
+                                    <i class="fas fa-share me-2"></i>Поделиться всеми
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function playPlaylist(playlistId) {
+    // Здесь можно добавить логику воспроизведения плейлиста
+    alert('Воспроизведение плейлиста');
+}
+
+function deletePlaylist(playlistId) {
+    if (confirm('Вы уверены, что хотите удалить этот плейлист? Это действие нельзя отменить.')) {
+        window.location.href = `{% url 'music:delete_playlist' 0 %}`.replace('0', playlistId);
+    }
+}
+
+function playAllPlaylists() {
+    // Здесь можно добавить логику воспроизведения всех плейлистов
+    alert('Воспроизведение всех плейлистов');
+}
+
+function exportPlaylists() {
+    // Здесь можно добавить логику экспорта плейлистов
+    alert('Функция экспорта плейлистов будет добавлена позже');
+}
+
+function shareAllPlaylists() {
+    // Здесь можно добавить логику общего шаринга
+    alert('Функция общего шаринга будет добавлена позже');
+}
+</script>
+{% endblock %}
