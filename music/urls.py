@@ -67,4 +67,7 @@ urlpatterns = [
     path('admin-panel/edit-group/<uuid:group_id>/', views.admin_edit_group, name='admin_edit_group'),
     path('admin-panel/delete-group/<uuid:group_id>/', views.admin_delete_group, name='admin_delete_group'),
     path('admin-panel/genres/', views.admin_genres, name='admin_genres'),
+    path('admin-panel/create-genre/', views.admin_create_genre, name='admin_create_genre'),
+    path('admin-panel/edit-genre/<uuid:pk>/', views.admin_edit_genre, name='admin_edit_genre'),
+    path('admin-panel/delete-genre/<uuid:pk>/', views.admin_delete_genre, name='admin_delete_genre'),
 ] 

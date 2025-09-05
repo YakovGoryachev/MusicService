@@ -10,6 +10,9 @@
                 <h1 class="h4 mb-0">
                     <i class="fas fa-tags me-2"></i>Жанры
                 </h1>
+                <a href="{% url 'music:admin_create_genre' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Добавить жанр
+                </a>
             </div>
 
             <div class="card">
@@ -26,9 +29,19 @@
                                 <tbody>
                                     {% for genre in genres %}
                                         <tr>
-                                            <td>{{ genre.name }}</td>
+                                            <td>
+                                                <strong>{{ genre.name }}</strong>
+                                            </td>
                                             <td class="text-end">
-                                                <span class="text-muted">(CRUD будет добавлен)</span>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'music:admin_edit_genre' genre.pk %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="confirmDelete('{{ genre.name }}', '{% url 'music:admin_delete_genre' genre.pk %}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -47,4 +60,28 @@
 </div>
 {% endblock %}
 
-
+{% block extra_js %}
+<script>
+function confirmDelete(genreName, deleteUrl) {
+    if (confirm(`Вы уверены, что хотите удалить жанр "${genreName}"?`)) {
+        // Создаем форму для POST запроса
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = deleteUrl;
+        
+        // Добавляем CSRF токен
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Удаление жанра - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="h4 mb-0">
+                    <i class="fas fa-trash me-2"></i>Удаление жанра
+                </h1>
+                <a href="{% url 'music:admin_genres' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Назад к списку
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Внимание!</strong> Вы собираетесь удалить жанр. Это действие нельзя отменить.
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Информация о жанре:</h5>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <strong>Название:</strong> {{ genre.name }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Да, удалить жанр
+                            </button>
+                            <a href="{% url 'music:admin_genres' %}" class="btn btn-outline-secondary">
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

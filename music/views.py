@@ -1072,3 +1072,72 @@ def admin_genres(request):
         'genres': genres,
     }
     return render(request, 'music/admin/admin_genres.html', context)
+
+
+@login_required
+def admin_create_genre(request):
+    """Создание жанра"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        
+        if name:
+            genre = Genre.objects.create(
+                name=name
+            )
+            messages.success(request, f'Жанр "{genre.name}" успешно создан!')
+            return redirect('music:admin_genres')
+        else:
+            messages.error(request, 'Название жанра обязательно!')
+    
+    return render(request, 'music/admin/admin_create_genre.html')
+            
+
+@login_required
+def admin_edit_genre(request, pk):
+    """Редактирование жанра"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    genre = get_object_or_404(Genre, pk=pk)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        
+        if name:
+            genre.name = name
+            genre.save()
+            messages.success(request, f'Жанр "{genre.name}" успешно обновлен!')
+            return redirect('music:admin_genres')
+        else:
+            messages.error(request, 'Название жанра обязательно!')
+    
+    context = {
+        'genre': genre,
+    }
+    return render(request, 'music/admin/admin_edit_genre.html', context)
+
+
+@login_required
+def admin_delete_genre(request, pk):
+    """Удаление жанра"""
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:home')
+    
+    genre = get_object_or_404(Genre, pk=pk)
+    
+    if request.method == 'POST':
+        genre_name = genre.name
+        genre.delete()
+        messages.success(request, f'Жанр "{genre_name}" успешно удален!')
+        return redirect('music:admin_genres')
+    
+    context = {
+        'genre': genre,
+    }
+    return render(request, 'music/admin/admin_delete_genre.html', context)
