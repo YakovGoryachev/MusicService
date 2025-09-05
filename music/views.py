@@ -99,7 +99,18 @@ def track_detail(request, pk):
 
 def album_list(request):
     """Список альбомов"""
-    albums = Album.objects.select_related('artist', 'group').order_by('-release_date')
+    query = request.GET.get('q', '')
+    
+    albums = Album.objects.select_related('artist', 'group')
+    
+    if query:
+        albums = albums.filter(
+            Q(name__icontains=query) |
+            Q(artist__name__icontains=query) |
+            Q(group__name__icontains=query)
+        ).distinct()
+    
+    albums = albums.order_by('-release_date')
     
     paginator = Paginator(albums, 12)
     page_number = request.GET.get('page')
@@ -107,6 +118,7 @@ def album_list(request):
     
     context = {
         'albums': page_obj,
+        'query': query,
     }
     return render(request, 'music/album_list.html', context)
 
@@ -125,7 +137,14 @@ def album_detail(request, pk):
 
 def artist_list(request):
     """Список артистов"""
-    artists = Artist.objects.all().order_by('name')
+    query = request.GET.get('q', '')
+    
+    artists = Artist.objects.all()
+    
+    if query:
+        artists = artists.filter(name__icontains=query)
+    
+    artists = artists.order_by('name')
     
     paginator = Paginator(artists, 12)
     page_number = request.GET.get('page')
@@ -133,6 +152,7 @@ def artist_list(request):
     
     context = {
         'artists': page_obj,
+        'query': query,
     }
     return render(request, 'music/artist_list.html', context)
 
@@ -151,7 +171,14 @@ def artist_detail(request, pk):
 
 def group_list(request):
     """Список групп"""
-    groups = Group.objects.all().order_by('name')
+    query = request.GET.get('q', '')
+    
+    groups = Group.objects.all()
+    
+    if query:
+        groups = groups.filter(name__icontains=query)
+    
+    groups = groups.order_by('name')
     
     paginator = Paginator(groups, 12)
     page_number = request.GET.get('page')
@@ -159,6 +186,7 @@ def group_list(request):
     
     context = {
         'groups': page_obj,
+        'query': query,
     }
     return render(request, 'music/group_list.html', context)
 
@@ -179,7 +207,16 @@ def group_detail(request, pk):
 
 def playlist_list(request):
     """Список публичных плейлистов"""
+    query = request.GET.get('q', '')
+    
     playlists = Playlist.objects.filter(is_public=True).select_related('user').prefetch_related('tracks')
+    
+    if query:
+        playlists = playlists.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(user__login__icontains=query)
+        ).distinct()
     
     paginator = Paginator(playlists, 12)
     page_number = request.GET.get('page')
@@ -187,6 +224,7 @@ def playlist_list(request):
     
     context = {
         'playlists': page_obj,
+        'query': query,
     }
     return render(request, 'music/playlist_list.html', context)
 
@@ -527,10 +565,32 @@ def admin_tracks(request):
         messages.error(request, 'Доступ запрещен. Требуются права администратора.')
         return redirect('music:home')
     
-    tracks = Track.objects.select_related('album', 'album__artist', 'album__group').prefetch_related('genres').order_by('-id')
+    query = request.GET.get('q', '')
+    genre_filter = request.GET.get('genre', '')
+    
+    tracks = Track.objects.select_related('album', 'album__artist', 'album__group').prefetch_related('genres')
+    
+    if query:
+        tracks = tracks.filter(
+            Q(name__icontains=query) |
+            Q(album__name__icontains=query) |
+            Q(album__artist__name__icontains=query) |
+            Q(album__group__name__icontains=query) |
+            Q(genres__name__icontains=query)
+        ).distinct()
+    
+    if genre_filter:
+        tracks = tracks.filter(genres__name__icontains=genre_filter)
+    
+    tracks = tracks.order_by('-id')
+    
+    genres = Genre.objects.all().order_by('name')
     
     context = {
         'tracks': tracks,
+        'query': query,
+        'genre_filter': genre_filter,
+        'genres': genres,
     }
     return render(request, 'music/admin/admin_tracks.html', context)
 
@@ -632,16 +692,24 @@ def admin_edit_track(request, pk):
         name = request.POST.get('name')
         album_id = request.POST.get('album')
         duration = request.POST.get('duration')
-        file_url = request.POST.get('file_url')
         genre_ids = request.POST.getlist('genres')
         
-        if name and album_id and duration and file_url:
+        if name:
             try:
-                album = Album.objects.get(pk=album_id)
+                # Обновляем основные поля
                 track.name = name
-                track.album = album
-                track.duration = int(duration)
-                track.file_url = file_url
+                
+                if album_id:
+                    album = Album.objects.get(pk=album_id)
+                    track.album = album
+                
+                if duration:
+                    track.duration = int(duration)
+                
+                # Обработка загрузки нового файла
+                if 'file' in request.FILES:
+                    track.file = request.FILES['file']
+                
                 track.save()
                 
                 # Обновляем жанры
@@ -656,7 +724,7 @@ def admin_edit_track(request, pk):
             except Exception as e:
                 messages.error(request, f'Ошибка обновления трека: {str(e)}')
         else:
-            messages.error(request, 'Заполните все обязательные поля!')
+            messages.error(request, 'Название трека обязательно!')
     
     albums = Album.objects.all()
     genres = Genre.objects.all()

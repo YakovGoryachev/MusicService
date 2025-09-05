@@ -1,0 +1,87 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Удаление трека - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="h4 mb-0">
+                    <i class="fas fa-trash me-2"></i>Удаление трека
+                </h1>
+                <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Назад к списку
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Внимание!</strong> Вы собираетесь удалить трек. Это действие нельзя отменить.
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Информация о треке:</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Название:</strong> {{ track.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Альбом:</strong> 
+                                {% if track.album %}
+                                    {{ track.album.name }}
+                                {% else %}
+                                    <span class="text-muted">Не указан</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Продолжительность:</strong> 
+                                {% if track.duration %}
+                                    {{ track.duration }} сек
+                                {% else %}
+                                    <span class="text-muted">Не указана</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Прослушиваний:</strong> {{ track.play_count }}
+                            </div>
+                            <div class="col-md-12">
+                                <strong>Жанры:</strong> 
+                                {% if track.genres.all %}
+                                    {% for genre in track.genres.all %}
+                                        <span class="badge bg-secondary me-1">{{ genre.name }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">Не указаны</span>
+                                {% endif %}
+                            </div>
+                            {% if track.file %}
+                            <div class="col-md-12">
+                                <strong>Файл:</strong> 
+                                <a href="{{ track.file.url }}" target="_blank" class="text-decoration-none">
+                                    <i class="fas fa-music me-1"></i>Слушать файл
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Да, удалить трек
+                            </button>
+                            <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

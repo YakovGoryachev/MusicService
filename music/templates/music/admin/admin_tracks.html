@@ -20,25 +20,32 @@
 
             <!-- Поиск и фильтры -->
             <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="searchInput" placeholder="Поиск по названию трека...">
-                        <button class="btn btn-outline-secondary" type="button" onclick="searchTracks()">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="albumFilter">
-                        <option value="">Все альбомы</option>
-                        <!-- Здесь будут загружены альбомы через JavaScript -->
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="genreFilter">
-                        <option value="">Все жанры</option>
-                        <!-- Здесь будут загружены жанры через JavaScript -->
-                    </select>
+                <div class="col-12">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Поиск по названию трека, альбому, артисту, группе или жанру...">
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" name="genre">
+                                <option value="">Все жанры</option>
+                                {% for genre in genres %}
+                                    <option value="{{ genre.name }}" {% if genre_filter == genre.name %}selected{% endif %}>
+                                        {{ genre.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Очистить
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
 

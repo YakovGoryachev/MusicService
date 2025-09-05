@@ -1,0 +1,95 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Редактирование трека - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="h4 mb-0">
+                    <i class="fas fa-edit me-2"></i>Редактирование трека
+                </h1>
+                <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Назад к списку
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Название трека *</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ track.name }}" required>
+                            <div class="form-text">Введите название трека</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="album" class="form-label">Альбом</label>
+                            <select class="form-select" id="album" name="album">
+                                <option value="">Выберите альбом</option>
+                                {% for album in albums %}
+                                    <option value="{{ album.id }}" {% if track.album and track.album.id == album.id %}selected{% endif %}>
+                                        {{ album.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Выберите альбом (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="duration" class="form-label">Продолжительность (секунды)</label>
+                            <input type="number" class="form-control" id="duration" name="duration" value="{{ track.duration }}">
+                            <div class="form-text">Продолжительность трека в секундах (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Аудиофайл</label>
+                            <input type="file" class="form-control" id="file" name="file" accept="audio/*">
+                            {% if track.file %}
+                                <div class="form-text">
+                                    Текущий файл: 
+                                    <a href="{{ track.file.url }}" target="_blank" class="text-decoration-none">
+                                        <i class="fas fa-music me-1"></i>Слушать текущий файл
+                                    </a>
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Выберите новый аудиофайл (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Жанры</label>
+                            <div class="row">
+                                {% for genre in genres %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="genre_{{ genre.id }}" name="genres" value="{{ genre.id }}"
+                                                   {% if genre.id in selected_genres %}checked{% endif %}>
+                                            <label class="form-check-label" for="genre_{{ genre.id }}">
+                                                {{ genre.name }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">Выберите жанры для трека</div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Сохранить изменения
+                            </button>
+                            <a href="{% url 'music:admin_tracks' %}" class="btn btn-outline-secondary">
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

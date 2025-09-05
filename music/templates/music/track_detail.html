@@ -49,20 +49,23 @@
                 <div class="text-end">
                     <div class="mb-2">
                         <span class="h4 text-warning">
-                            <i class="fas fa-star"></i> {{ track.average_rating|default:"0.0"|floatformat:1 }}
+                            <i class="fas fa-star"></i> {{ avg_rating|default:"0.0"|floatformat:1 }}
                         </span>
-                        <small class="text-muted d-block">({{ track.ratings.count }} оценок)</small>
+                        <small class="text-muted d-block">({{ ratings.count }} оценок)</small>
                     </div>
                     
                     {% if user.is_authenticated %}
                         <div class="rating-buttons mb-2">
                             {% for i in "12345" %}
-                                <button class="btn btn-sm btn-outline-warning rating-btn" data-rating="{{ i }}" 
-                                        onclick="rateTrack('{{ track.pk }}', {{ i }})">
+                                <button class="btn btn-sm {% if user_rating and user_rating.value == i|add:0 %}btn-warning{% else %}btn-outline-warning{% endif %} rating-btn" 
+                                        data-rating="{{ i }}" onclick="rateTrack('{{ track.pk }}', {{ i }})">
                                     {{ i }}
                                 </button>
                             {% endfor %}
                         </div>
+                        {% if user_rating %}
+                            <small class="text-muted">Ваша оценка: {{ user_rating.value }}</small>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -250,7 +253,9 @@ function playTrack() {
 }
 
 function rateTrack(trackId, rating) {
-    fetch(`/music/api/tracks/${trackId}/rate/`, {
+    console.log('Оценка трека:', trackId, rating);
+    
+    fetch(`/api/track/${trackId}/rate/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -258,10 +263,14 @@ function rateTrack(trackId, rating) {
         },
         body: JSON.stringify({ rating: rating })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Статус ответа:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Данные ответа:', data);
         if (data.success) {
-            // Обновляем отображение рейтинга
+            console.log('Оценка успешно сохранена, перезагружаем страницу...');
             location.reload();
         } else {
             alert('Ошибка: ' + data.error);
@@ -275,7 +284,7 @@ function rateTrack(trackId, rating) {
 
 function addToPlaylist(trackId) {
     // Загружаем список плейлистов пользователя
-    fetch(`/music/api/playlists/`)
+    fetch(`/api/playlists/`)
         .then(response => response.json())
         .then(data => {
             const playlistList = document.getElementById('playlistList');
@@ -308,7 +317,7 @@ function addToPlaylist(trackId) {
 }
 
 function addTrackToPlaylist(trackId, playlistId) {
-    fetch(`/music/api/playlists/${playlistId}/add-track/`, {
+            fetch(`/api/playlists/${playlistId}/add-track/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -355,7 +364,7 @@ function shareTrack() {
 
 function deleteComment(commentId) {
     if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
-        fetch(`/music/api/comments/${commentId}/delete/`, {
+        fetch(`/api/comments/${commentId}/delete/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
