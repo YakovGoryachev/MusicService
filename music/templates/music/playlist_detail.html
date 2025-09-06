@@ -7,8 +7,8 @@
     <!-- Информация о плейлисте -->
     <div class="row mb-5">
         <div class="col-lg-4 col-md-5 mb-4">
-            {% if playlist.photo_url %}
-                <img src="{{ playlist.photo_url }}" class="img-fluid rounded shadow" alt="{{ playlist.name }}">
+            {% if playlist.photo %}
+                <img src="{{ playlist.photo.url }}" class="img-fluid rounded shadow" alt="{{ playlist.name }}">
             {% else %}
                 <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
                     <i class="fas fa-playlist fa-5x text-white"></i>
@@ -86,9 +86,11 @@
             </div>
             
             <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary btn-lg" onclick="playPlaylist()">
-                    <i class="fas fa-play me-2"></i>Слушать плейлист
-                </button>
+                {% if tracks %}
+                    <button class="btn btn-primary btn-lg" onclick="playPlaylist()">
+                        <i class="fas fa-play me-2"></i>Слушать плейлист
+                    </button>
+                {% endif %}
                 
                 {% if user.is_authenticated %}
                     {% if user == playlist.owner %}
@@ -119,12 +121,12 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="h5 mb-0">
-                        <i class="fas fa-list me-2"></i>Треки плейлиста ({{ playlist.tracks.count }})
+                        <i class="fas fa-list me-2"></i>Треки плейлиста ({{ tracks|length }})
                     </h3>
                 </div>
                 
                 <div class="card-body p-0">
-                    {% if playlist.tracks.all %}
+                    {% if tracks %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
@@ -139,8 +141,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for playlist_track in playlist.playlist_tracks.all %}
-                                        {% with track=playlist_track.track %}
+                                    {% for track in tracks %}
                                             <tr>
                                                 <td class="align-middle">{{ forloop.counter }}</td>
                                                 <td class="align-middle">
@@ -204,7 +205,6 @@
                                                     </div>
                                                 </td>
                                             </tr>
-                                        {% endwith %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -272,13 +272,20 @@
 
 <script>
 function playPlaylist() {
-    // Здесь можно добавить логику воспроизведения плейлиста
-    alert('Воспроизведение плейлиста: {{ playlist.name }}');
+    // Начинаем воспроизведение с первого трека
+    const firstTrack = document.querySelector('tbody tr:first-child button[onclick*="playTrack"]');
+    if (firstTrack) {
+        firstTrack.click();
+    } else {
+        alert('В плейлисте нет треков для воспроизведения');
+    }
 }
 
 function playTrack(trackId) {
     // Здесь можно добавить логику воспроизведения отдельного трека
-    alert('Воспроизведение трека');
+    console.log('Воспроизведение трека:', trackId);
+    // В реальном приложении здесь бы был код для воспроизведения аудио
+    alert(`Воспроизведение трека: ${trackId}`);
 }
 
 function ratePlaylist(playlistId, rating) {

@@ -6,7 +6,7 @@
 <div class="container">
     <!-- Заголовок и поиск -->
     <div class="row mb-4">
-        <div class="col-md-8">
+        <div class="col-md-6">
             <h1 class="h2">
                 <i class="fas fa-playlist me-2"></i>Все плейлисты
             </h1>
@@ -14,7 +14,7 @@
                 <p class="text-muted">Результаты поиска: "{{ request.GET.q }}"</p>
             {% endif %}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <form method="GET" action="{% url 'music:playlist_list' %}" class="d-flex">
                 <input type="text" class="form-control me-2" name="q" placeholder="Поиск плейлистов..." 
                        value="{{ request.GET.q }}" aria-label="Search">
@@ -23,6 +23,13 @@
                 </button>
             </form>
         </div>
+        {% if user.is_authenticated %}
+            <div class="col-md-3 text-end">
+                <a href="{% url 'music:create_playlist' %}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Создать плейлист
+                </a>
+            </div>
+        {% endif %}
     </div>
 
     <!-- Фильтры -->
@@ -78,8 +85,8 @@
         {% for playlist in playlists %}
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="card h-100">
-                    {% if playlist.photo_url %}
-                        <img src="{{ playlist.photo_url }}" class="card-img-top" alt="{{ playlist.name }}" style="height: 200px; object-fit: cover;">
+                    {% if playlist.photo %}
+                        <img src="{{ playlist.photo.url }}" class="card-img-top" alt="{{ playlist.name }}" style="height: 200px; object-fit: cover;">
                     {% else %}
                         <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
                             <i class="fas fa-playlist fa-4x text-white"></i>

@@ -63,7 +63,7 @@ class PlaylistForm(forms.ModelForm):
     """Форма создания/редактирования плейлиста"""
     class Meta:
         model = Playlist
-        fields = ['name', 'description', 'is_public', 'photo_url']
+        fields = ['name', 'description', 'is_public', 'photo']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -77,9 +77,9 @@ class PlaylistForm(forms.ModelForm):
             'is_public': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
-            'photo_url': forms.URLInput(attrs={
+            'photo': forms.FileInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'URL обложки плейлиста (необязательно)'
+                'accept': 'image/*'
             })
         }
     

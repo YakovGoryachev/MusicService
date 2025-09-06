@@ -49,6 +49,8 @@ urlpatterns = [
     path('api/album/<uuid:album_id>/rate/', views.api_rate_album, name='api_rate_album'),
     path('api/track/<uuid:track_id>/comment/', views.api_add_comment, name='api_add_comment'),
     path('api/comments/<uuid:comment_id>/delete/', views.api_delete_comment, name='api_delete_comment'),
+    path('api/playlists/', views.api_get_playlists, name='api_get_playlists'),
+    path('api/playlists/<uuid:playlist_id>/add-track/', views.api_add_track_to_playlist, name='api_add_track_to_playlist'),
     
     # Админ панель
     path('admin-panel/', views.admin_panel, name='admin_panel'),

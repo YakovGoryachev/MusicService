@@ -257,14 +257,21 @@ def playlist_list(request):
 
 def playlist_detail(request, pk):
     """Детальная страница плейлиста"""
-    playlist = get_object_or_404(Playlist.objects.select_related('user').prefetch_related('tracks'), pk=pk)
+    playlist = get_object_or_404(
+        Playlist.objects.select_related('user').prefetch_related('tracks', 'playlist_tracks__track__album__artist', 'playlist_tracks__track__album__group', 'playlist_tracks__track__genres'), 
+        pk=pk
+    )
     
     if not playlist.is_public and request.user != playlist.user:
         messages.error(request, 'Этот плейлист приватный')
         return redirect('music:playlist_list')
     
+    # Получаем треки через промежуточную таблицу для правильного порядка
+    tracks = [pt.track for pt in playlist.playlist_tracks.all().order_by('added_date')]
+    
     context = {
         'playlist': playlist,
+        'tracks': tracks,
     }
     return render(request, 'music/playlist_detail.html', context)
 
@@ -283,19 +290,37 @@ def my_playlists(request):
 @login_required
 def create_playlist(request):
     """Создание плейлиста"""
+    if not request.user.is_authenticated:
+        messages.error(request, 'Необходимо войти в систему для создания плейлиста.')
+        return redirect('music:login')
+    
     if request.method == 'POST':
-        form = PlaylistForm(request.POST)
-        if form.is_valid():
-            playlist = form.save(commit=False)
-            playlist.user = request.user
-            playlist.save()
-            messages.success(request, 'Плейлист создан успешно!')
-            return redirect('music:playlist_detail', pk=playlist.pk)
-    else:
-        form = PlaylistForm()
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        is_private = request.POST.get('is_private') == 'True'
+        photo = request.FILES.get('photo')
+        
+        if name:
+            try:
+                playlist = Playlist.objects.create(
+                    user=request.user,
+                    name=name,
+                    description=description,
+                    is_public=not is_private,
+                    photo=photo
+                )
+                messages.success(request, f'Плейлист "{name}" создан успешно!')
+                return redirect('music:playlist_detail', pk=playlist.pk)
+            except Exception as e:
+                messages.error(request, f'Ошибка создания плейлиста: {str(e)}')
+        else:
+            messages.error(request, 'Название плейлиста обязательно!')
+    
+    # Получаем жанры для формы
+    genres = Genre.objects.all()
     
     context = {
-        'form': form,
+        'genres': genres,
     }
     return render(request, 'music/create_playlist.html', context)
 
@@ -605,6 +630,50 @@ def api_delete_comment(request, comment_id):
         
         return JsonResponse({'success': True})
     
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def api_get_playlists(request):
+    """API для получения плейлистов пользователя"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    
+    try:
+        playlists = Playlist.objects.filter(user=request.user).values('id', 'name')
+        return JsonResponse({'playlists': list(playlists)})
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def api_add_track_to_playlist(request, playlist_id):
+    """API для добавления трека в плейлист"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        track_id = data.get('track_id')
+        
+        if not track_id:
+            return JsonResponse({'error': 'ID трека не указан'}, status=400)
+        
+        playlist = get_object_or_404(Playlist, pk=playlist_id, user=request.user)
+        track = get_object_or_404(Track, pk=track_id)
+        
+        # Проверяем, не добавлен ли уже трек
+        if PlaylistTrack.objects.filter(playlist=playlist, track=track).exists():
+            return JsonResponse({'error': 'Трек уже добавлен в этот плейлист'}, status=400)
+        
+        PlaylistTrack.objects.create(playlist=playlist, track=track)
+        
+        return JsonResponse({'success': True})
+    
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Неверные данные'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 

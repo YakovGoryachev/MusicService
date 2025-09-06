@@ -283,11 +283,11 @@ class TrackGenre(models.Model):
 class Playlist(models.Model):
     """Модель плейлиста"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь', related_name='playlists')
     name = models.CharField(max_length=200, verbose_name='Название плейлиста')
     description = models.TextField(blank=True, verbose_name='Описание')
     is_public = models.BooleanField(default=True, verbose_name='Публичный')
-    photo_url = models.URLField(max_length=500, null=True, blank=True, verbose_name='URL фото')
+    photo = models.ImageField(upload_to='playlists/', null=True, blank=True, verbose_name='Фото плейлиста')
     creation_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     tracks = models.ManyToManyField(Track, through='PlaylistTrack', verbose_name='Треки')
     
@@ -298,6 +298,11 @@ class Playlist(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.user.login})"
+    
+    @property
+    def owner(self):
+        """Возвращает владельца плейлиста"""
+        return self.user
 
 
 class PlaylistTrack(models.Model):
