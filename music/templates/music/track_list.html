@@ -54,14 +54,13 @@
                         </div>
                         <div class="col-md-3">
                             <label for="artist" class="form-label">Артист</label>
-                            <select class="form-select" id="artist" name="artist">
-                                <option value="">Все артисты</option>
-                                {% for artist in artists %}
-                                    <option value="{{ artist.name }}" {% if request.GET.artist == artist.name %}selected{% endif %}>
-                                        {{ artist.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            <input type="text" class="form-control" id="artist" name="artist" 
+                                   placeholder="Введите имя артиста..." value="{{ request.GET.artist }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="group" class="form-label">Группа</label>
+                            <input type="text" class="form-control" id="group" name="group" 
+                                   placeholder="Введите название группы..." value="{{ request.GET.group }}">
                         </div>
                         <div class="col-md-3">
                             <label for="sort" class="form-label">Сортировка</label>

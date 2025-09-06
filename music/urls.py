@@ -46,7 +46,9 @@ urlpatterns = [
     
     # API endpoints
     path('api/track/<uuid:track_id>/rate/', views.api_rate_track, name='api_rate_track'),
+    path('api/album/<uuid:album_id>/rate/', views.api_rate_album, name='api_rate_album'),
     path('api/track/<uuid:track_id>/comment/', views.api_add_comment, name='api_add_comment'),
+    path('api/comments/<uuid:comment_id>/delete/', views.api_delete_comment, name='api_delete_comment'),
     
     # Админ панель
     path('admin-panel/', views.admin_panel, name='admin_panel'),

@@ -36,7 +36,9 @@
                                 {{ track.album.artist.name }}
                             </a>
                         </p>
-                    {% elif track.album.group %}
+                    {% endif %}
+                    
+                    {% if track.album.group %}
                         <p class="h5 mb-2">
                             <i class="fas fa-users me-2"></i>
                             <a href="{% url 'music:group_detail' track.album.group.pk %}" class="text-decoration-none">
@@ -112,9 +114,6 @@
                             <button class="btn btn-info me-2" onclick="stopTrack()">
                                 <i class="fas fa-stop"></i> Стоп
                             </button>
-                            <button class="btn btn-success me-2" onclick="downloadTrack()">
-                                <i class="fas fa-download"></i> Скачать
-                            </button>
                         </div>
                     {% endif %}
                 </div>
@@ -135,17 +134,9 @@
             </div>
             
             <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary btn-lg" onclick="playTrack()">
-                    <i class="fas fa-play me-2"></i>Слушать
-                </button>
-                
                 {% if user.is_authenticated %}
                     <button class="btn btn-outline-primary" onclick="addToPlaylist('{{ track.pk }}')">
                         <i class="fas fa-plus me-2"></i>В плейлист
-                    </button>
-                    
-                    <button class="btn btn-outline-success" onclick="toggleFavorite()">
-                        <i class="fas fa-heart me-2"></i>В избранное
                     </button>
                     
                     <button class="btn btn-outline-info" onclick="shareTrack()">
@@ -162,7 +153,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="h5 mb-0">
-                        <i class="fas fa-comments me-2"></i>Комментарии ({{ track.comments.count }})
+                        <i class="fas fa-comments me-2"></i>Комментарии ({{ comments.count }})
                     </h3>
                 </div>
                 
@@ -187,7 +178,7 @@
                     {% endif %}
                     
                     <div id="comments-section">
-                        {% for comment in track.comments.all %}
+                        {% for comment in comments %}
                             <div class="comment mb-3 p-3 border rounded">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <div class="d-flex align-items-center">
@@ -364,14 +355,25 @@ function shareTrack() {
 
 function deleteComment(commentId) {
     if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            alert('Ошибка: CSRF токен не найден');
+            return;
+        }
+        
         fetch(`/api/comments/${commentId}/delete/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': csrfToken.value
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
@@ -441,3 +443,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+

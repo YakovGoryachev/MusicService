@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (
     User, Group, Artist, ArtistGroup, Album, Genre, Track, 
-    TrackGenre, Playlist, PlaylistTrack, Rating, Comment
+    TrackGenre, Playlist, PlaylistTrack, TrackRating, AlbumRating, Comment
 )
 
 
@@ -117,13 +117,22 @@ class PlaylistTrackAdmin(admin.ModelAdmin):
     ordering = ('-added_date', 'playlist__name')
 
 
-@admin.register(Rating)
-class RatingAdmin(admin.ModelAdmin):
-    """Админ-панель для оценок"""
-    list_display = ('user', 'track', 'value')
-    list_filter = ('value', 'track__album__group')
+@admin.register(TrackRating)
+class TrackRatingAdmin(admin.ModelAdmin):
+    """Админ-панель для оценок треков"""
+    list_display = ('user', 'track', 'value', 'rating_date')
+    list_filter = ('value', 'rating_date', 'track__album__group')
     search_fields = ('user__login', 'track__name')
-    ordering = ('-value', 'track__name')
+    ordering = ('-rating_date', 'track__name')
+
+
+@admin.register(AlbumRating)
+class AlbumRatingAdmin(admin.ModelAdmin):
+    """Админ-панель для оценок альбомов"""
+    list_display = ('user', 'album', 'value', 'rating_date')
+    list_filter = ('value', 'rating_date', 'album__group')
+    search_fields = ('user__login', 'album__name')
+    ordering = ('-rating_date', 'album__name')
 
 
 @admin.register(Comment)

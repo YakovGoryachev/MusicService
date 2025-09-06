@@ -27,16 +27,31 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="album" class="form-label">Альбом</label>
-                            <select class="form-select" id="album" name="album">
-                                <option value="">Выберите альбом</option>
-                                {% for album in albums %}
-                                    <option value="{{ album.id }}" {% if track.album and track.album.id == album.id %}selected{% endif %}>
-                                        {{ album.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <div class="form-text">Выберите альбом (необязательно)</div>
+                            <label for="artist_name" class="form-label">Артист</label>
+                            <input type="text" class="form-control" id="artist_name" name="artist_name" 
+                                   value="{% if track.album and track.album.artist %}{{ track.album.artist.name }}{% endif %}">
+                            <div class="form-text">Введите имя артиста (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="group_name" class="form-label">Группа</label>
+                            <input type="text" class="form-control" id="group_name" name="group_name" 
+                                   value="{% if track.album and track.album.group %}{{ track.album.group.name }}{% endif %}">
+                            <div class="form-text">Введите название группы (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="album_name" class="form-label">Альбом</label>
+                            <input type="text" class="form-control" id="album_name" name="album_name" 
+                                   value="{% if track.album %}{{ track.album.name }}{% endif %}">
+                            <div class="form-text">Введите название альбома (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="album_release_date" class="form-label">Дата выпуска альбома</label>
+                            <input type="date" class="form-control" id="album_release_date" name="album_release_date" 
+                                   value="{% if track.album and track.album.release_date %}{{ track.album.release_date|date:'Y-m-d' }}{% endif %}">
+                            <div class="form-text">Дата выпуска альбома (необязательно)</div>
                         </div>
                         
                         <div class="mb-3">

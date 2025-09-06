@@ -7,8 +7,8 @@
     <!-- Информация об артисте -->
     <div class="row mb-5">
         <div class="col-lg-4 col-md-5 mb-4">
-            {% if artist.photo_url %}
-                <img src="{{ artist.photo_url }}" class="img-fluid rounded shadow" alt="{{ artist.name }}">
+            {% if artist.avatar %}
+                <img src="{{ artist.avatar.url }}" class="img-fluid rounded shadow" alt="{{ artist.name }}">
             {% else %}
                 <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
                     <i class="fas fa-user fa-5x text-white"></i>
@@ -315,8 +315,8 @@
 
 <script>
 function playArtistTracks() {
-    // Здесь можно добавить логику воспроизведения всех треков артиста
-    alert('Воспроизведение всех треков артиста: {{ artist.name }}');
+    // Переходим на страницу треков с фильтром по артисту
+    window.location.href = '{% url "music:track_list" %}?artist={{ artist.name }}';
 }
 
 function playTrack(trackId) {

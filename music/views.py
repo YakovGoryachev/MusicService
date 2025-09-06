@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import (
-    Track, Album, Playlist, Genre, Rating, Comment, 
+    Track, Album, Playlist, Genre, TrackRating, AlbumRating, Comment, 
     User, Group, Artist, ArtistGroup, TrackGenre, PlaylistTrack
 )
 from .forms import UserRegistrationForm, UserLoginForm, PlaylistForm, CommentForm, TrackCreateForm
@@ -34,8 +34,10 @@ def track_list(request):
     """Список всех треков"""
     query = request.GET.get('q', '')
     genre_filter = request.GET.get('genre', '')
+    artist_filter = request.GET.get('artist', '')
+    group_filter = request.GET.get('group', '')
     
-    tracks = Track.objects.select_related('album', 'album__artist', 'album__group').prefetch_related('genres')
+    tracks = Track.objects.select_related('album', 'album__artist', 'album__group').prefetch_related('genres', 'ratings')
     
     if query:
         tracks = tracks.filter(
@@ -48,6 +50,12 @@ def track_list(request):
     
     if genre_filter:
         tracks = tracks.filter(genres__name=genre_filter)
+    
+    if artist_filter:
+        tracks = tracks.filter(album__artist__name__icontains=artist_filter)
+    
+    if group_filter:
+        tracks = tracks.filter(album__group__name__icontains=group_filter)
     
     tracks = tracks.order_by('-id')
     
@@ -71,7 +79,7 @@ def track_detail(request, pk):
     track = get_object_or_404(Track.objects.select_related('album', 'album__artist', 'album__group').prefetch_related('genres'), pk=pk)
     
     # Получаем оценки и комментарии
-    ratings = Rating.objects.filter(track=track).select_related('user')
+    ratings = TrackRating.objects.filter(track=track).select_related('user')
     comments = Comment.objects.filter(track=track).select_related('user').order_by('-created_at')
     
     # Средняя оценка
@@ -101,7 +109,7 @@ def album_list(request):
     """Список альбомов"""
     query = request.GET.get('q', '')
     
-    albums = Album.objects.select_related('artist', 'group')
+    albums = Album.objects.select_related('artist', 'group').prefetch_related('ratings')
     
     if query:
         albums = albums.filter(
@@ -125,12 +133,30 @@ def album_list(request):
 
 def album_detail(request, pk):
     """Детальная страница альбома"""
-    album = get_object_or_404(Album.objects.select_related('artist', 'group'), pk=pk)
-    tracks = album.track_set.all().order_by('id')
+    album = get_object_or_404(Album.objects.select_related('artist', 'group').prefetch_related('ratings'), pk=pk)
+    tracks = album.track_set.all().prefetch_related('ratings', 'genres').order_by('id')
+    
+    # Получаем оценки альбома
+    ratings = AlbumRating.objects.filter(album=album).select_related('user')
+    
+    # Средняя оценка альбома
+    avg_rating = ratings.aggregate(avg=Avg('value'))['avg'] or 0
+    
+    # Пользовательская оценка альбома
+    user_rating = None
+    if request.user.is_authenticated:
+        user_rating = ratings.filter(user=request.user).first()
+    
+    # Общая длительность альбома
+    total_duration = sum(track.duration or 0 for track in tracks)
     
     context = {
         'album': album,
         'tracks': tracks,
+        'ratings': ratings,
+        'avg_rating': round(avg_rating, 1),
+        'user_rating': user_rating,
+        'total_duration': total_duration,
     }
     return render(request, 'music/album_detail.html', context)
 
@@ -324,7 +350,7 @@ def add_to_playlist(request, track_id):
         messages.success(request, f'Трек "{track.name}" добавлен в плейлист "{playlist.name}"!')
     else:
         messages.error(request, 'Выберите плейлист!')
-        
+            
     return redirect('music:track_detail', pk=track_id)
 
 
@@ -351,7 +377,7 @@ def rate_track(request, track_id):
     if rating_value and rating_value.isdigit():
         rating_value = int(rating_value)
         if 1 <= rating_value <= 5:
-            rating, created = Rating.objects.get_or_create(
+            rating, created = TrackRating.objects.get_or_create(
                 user=request.user,
                 track=track,
                 defaults={'value': rating_value}
@@ -459,7 +485,7 @@ def user_logout(request):
 def profile(request):
     """Профиль пользователя"""
     user_playlists = Playlist.objects.filter(user=request.user).prefetch_related('tracks')
-    user_ratings = Rating.objects.filter(user=request.user).select_related('track', 'track__album')
+    user_ratings = TrackRating.objects.filter(user=request.user).select_related('track', 'track__album')
     
     context = {
         'user_playlists': user_playlists,
@@ -484,9 +510,40 @@ def api_rate_track(request, track_id):
             return JsonResponse({'error': 'Оценка должна быть от 1 до 5'}, status=400)
         
         track = get_object_or_404(Track, pk=track_id)
-        rating, created = Rating.objects.get_or_create(
+        rating, created = TrackRating.objects.get_or_create(
             user=request.user,
             track=track,
+            defaults={'value': rating_value}
+        )
+        
+        if not created:
+            rating.value = rating_value
+            rating.save()
+        
+        return JsonResponse({'success': True, 'rating': rating_value})
+    
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Неверные данные'}, status=400)
+
+
+@csrf_exempt
+@require_POST
+def api_rate_album(request, album_id):
+    """API для оценки альбома"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        rating_value = int(data.get('rating', 0))
+        
+        if not (1 <= rating_value <= 5):
+            return JsonResponse({'error': 'Оценка должна быть от 1 до 5'}, status=400)
+        
+        album = get_object_or_404(Album, pk=album_id)
+        rating, created = AlbumRating.objects.get_or_create(
+            user=request.user,
+            album=album,
             defaults={'value': rating_value}
         )
         
@@ -533,6 +590,23 @@ def api_add_comment(request, track_id):
     
     except (ValueError, json.JSONDecodeError):
         return JsonResponse({'error': 'Неверные данные'}, status=400)
+
+
+@csrf_exempt
+@require_POST
+def api_delete_comment(request, comment_id):
+    """API для удаления комментария"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    
+    try:
+        comment = get_object_or_404(Comment, pk=comment_id, user=request.user)
+        comment.delete()
+        
+        return JsonResponse({'success': True})
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 # Админ панель представления
@@ -690,7 +764,10 @@ def admin_edit_track(request, pk):
     if request.method == 'POST':
         # Обработка редактирования трека
         name = request.POST.get('name')
-        album_id = request.POST.get('album')
+        artist_name = request.POST.get('artist_name')
+        group_name = request.POST.get('group_name')
+        album_name = request.POST.get('album_name')
+        album_release_date = request.POST.get('album_release_date')
         duration = request.POST.get('duration')
         genre_ids = request.POST.getlist('genres')
         
@@ -699,17 +776,51 @@ def admin_edit_track(request, pk):
                 # Обновляем основные поля
                 track.name = name
                 
-                if album_id:
-                    album = Album.objects.get(pk=album_id)
-                    track.album = album
-                
                 if duration:
                     track.duration = int(duration)
+                else:
+                    track.duration = None
                 
                 # Обработка загрузки нового файла
                 if 'file' in request.FILES:
                     track.file = request.FILES['file']
                 
+                # Обработка артиста
+                artist = None
+                if artist_name:
+                    artist, created = Artist.objects.get_or_create(
+                        name=artist_name,
+                        defaults={'biography': ''}
+                    )
+                
+                # Обработка группы
+                group = None
+                if group_name:
+                    group, created = Group.objects.get_or_create(
+                        name=group_name,
+                        defaults={'description': ''}
+                    )
+                
+                # Обработка альбома
+                album = None
+                if album_name:
+                    album, created = Album.objects.get_or_create(
+                        name=album_name,
+                        defaults={
+                            'release_date': album_release_date if album_release_date else None,
+                            'artist': artist,
+                            'group': group,
+                        }
+                    )
+                    # Обновляем альбом если он уже существует
+                    if not created:
+                        album.artist = artist
+                        album.group = group
+                        if album_release_date:
+                            album.release_date = album_release_date
+                        album.save()
+                
+                track.album = album
                 track.save()
                 
                 # Обновляем жанры
@@ -717,7 +828,7 @@ def admin_edit_track(request, pk):
                 for genre_id in genre_ids:
                     if genre_id:
                         genre = Genre.objects.get(pk=genre_id)
-                        TrackGenre.objects.create(track=track, genre=genre)
+                        TrackGenre.objects.get_or_create(track=track, genre=genre)
                 
                 messages.success(request, f'Трек "{name}" успешно обновлен!')
                 return redirect('music:admin_tracks')

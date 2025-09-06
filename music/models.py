@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
+import os
 
 
 class CustomUserManager(BaseUserManager):
@@ -140,6 +141,34 @@ class Album(models.Model):
     
     def __str__(self):
         return self.name
+    
+    @property
+    def average_rating(self):
+        """Возвращает среднюю оценку альбома"""
+        from django.db.models import Avg
+        avg = self.ratings.aggregate(avg=Avg('value'))['avg']
+        return round(avg, 1) if avg else 0.0
+    
+    def get_user_rating(self, user):
+        """Возвращает оценку пользователя для альбома"""
+        if not user.is_authenticated:
+            return None
+        try:
+            return self.ratings.get(user=user).value
+        except AlbumRating.DoesNotExist:
+            return None
+    
+    @property
+    def tracks_count(self):
+        """Возвращает количество треков в альбоме"""
+        return self.track_set.count()
+    
+    @property
+    def total_play_count(self):
+        """Возвращает общее количество прослушиваний всех треков альбома"""
+        from django.db.models import Sum
+        total = self.track_set.aggregate(total=Sum('play_count'))['total']
+        return total or 0
 
 
 class Genre(models.Model):
@@ -179,6 +208,60 @@ class Track(models.Model):
         if self.file:
             return self.file.url
         return None
+    
+    @property
+    def average_rating(self):
+        """Возвращает среднюю оценку трека"""
+        from django.db.models import Avg
+        avg = self.ratings.aggregate(avg=Avg('value'))['avg']
+        return round(avg, 1) if avg else 0.0
+    
+    def get_user_rating(self, user):
+        """Возвращает оценку пользователя для трека"""
+        if not user.is_authenticated:
+            return None
+        try:
+            return self.ratings.get(user=user).value
+        except TrackRating.DoesNotExist:
+            return None
+    
+    def calculate_duration(self):
+        """Рассчитывает длительность трека из файла"""
+        if not self.file:
+            return None
+        
+        try:
+            # Попробуем использовать mutagen для MP3 файлов
+            from mutagen import File as MutagenFile
+            audio_file = MutagenFile(self.file.path)
+            if audio_file is not None and hasattr(audio_file, 'info'):
+                duration = int(audio_file.info.length)
+                return duration
+        except ImportError:
+            # Если mutagen не установлен, попробуем использовать wave для WAV файлов
+            try:
+                import wave
+                if self.file.path.lower().endswith('.wav'):
+                    with wave.open(self.file.path, 'rb') as wav_file:
+                        frames = wav_file.getnframes()
+                        rate = wav_file.getframerate()
+                        duration = int(frames / rate)
+                        return duration
+            except:
+                pass
+        except Exception:
+            pass
+        
+        return None
+    
+    def save(self, *args, **kwargs):
+        # Если длительность не задана, попробуем рассчитать её
+        if not self.duration and self.file:
+            calculated_duration = self.calculate_duration()
+            if calculated_duration:
+                self.duration = calculated_duration
+        
+        super().save(*args, **kwargs)
 
 
 class TrackGenre(models.Model):
@@ -234,7 +317,7 @@ class PlaylistTrack(models.Model):
         return f"{self.track.name} в {self.playlist.name}"
 
 
-class Rating(models.Model):
+class TrackRating(models.Model):
     """Модель оценки трека"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     value = models.PositiveSmallIntegerField(
@@ -242,16 +325,38 @@ class Rating(models.Model):
         verbose_name='Оценка'
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
-    track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек')
+    track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек', related_name='ratings')
+    rating_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата оценки')
     
     class Meta:
-        db_table = 'оценка'
-        verbose_name = 'Оценка'
-        verbose_name_plural = 'Оценки'
+        db_table = 'оценка_трека'
+        verbose_name = 'Оценка трека'
+        verbose_name_plural = 'Оценки треков'
         unique_together = ['user', 'track']
     
     def __str__(self):
         return f"{self.user.login} оценил {self.track.name} на {self.value}"
+
+
+class AlbumRating(models.Model):
+    """Модель оценки альбома"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    value = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name='Оценка'
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    album = models.ForeignKey(Album, on_delete=models.CASCADE, verbose_name='Альбом', related_name='ratings')
+    rating_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата оценки')
+    
+    class Meta:
+        db_table = 'оценка_альбома'
+        verbose_name = 'Оценка альбома'
+        verbose_name_plural = 'Оценки альбомов'
+        unique_together = ['user', 'album']
+    
+    def __str__(self):
+        return f"{self.user.login} оценил {self.album.name} на {self.value}"
 
 
 class Comment(models.Model):

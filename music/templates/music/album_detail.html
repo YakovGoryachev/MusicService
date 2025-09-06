@@ -3,12 +3,13 @@
 {% block title %}{{ album.name }} - Музыкальный Сервис{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container">
     <!-- Информация об альбоме -->
     <div class="row mb-5">
         <div class="col-lg-4 col-md-5 mb-4">
-            {% if album.photo_url %}
-                <img src="{{ album.photo_url }}" class="img-fluid rounded shadow" alt="{{ album.name }}">
+            {% if album.photo %}
+                <img src="{{ album.photo.url }}" class="img-fluid rounded shadow" alt="{{ album.name }}">
             {% else %}
                 <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
                     <i class="fas fa-compact-disc fa-5x text-white"></i>
@@ -41,20 +42,23 @@
                 <div class="text-end">
                     <div class="mb-2">
                         <span class="h4 text-warning">
-                            <i class="fas fa-star"></i> {{ album.average_rating|default:"0.0"|floatformat:1 }}
+                            <i class="fas fa-star"></i> {{ avg_rating|default:"0.0"|floatformat:1 }}
                         </span>
-                        <small class="text-muted d-block">({{ album.ratings.count }} оценок)</small>
+                        <small class="text-muted d-block">({{ ratings.count }} оценок)</small>
                     </div>
                     
                     {% if user.is_authenticated %}
                         <div class="rating-buttons mb-2">
                             {% for i in "12345" %}
-                                <button class="btn btn-sm btn-outline-warning rating-btn" data-rating="{{ i }}" 
-                                        onclick="rateAlbum('{{ album.pk }}', {{ i }})">
+                                <button class="btn btn-sm {% if user_rating and user_rating.value == i|add:0 %}btn-warning{% else %}btn-outline-warning{% endif %} rating-btn" 
+                                        data-rating="{{ i }}" onclick="rateAlbum('{{ album.pk }}', {{ i }})">
                                     {{ i }}
                                 </button>
                             {% endfor %}
                         </div>
+                        {% if user_rating %}
+                            <small class="text-muted">Ваша оценка: {{ user_rating.value }}</small>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -70,7 +74,7 @@
                     
                     <p class="mb-2">
                         <i class="fas fa-music me-2"></i>
-                        <strong>Количество треков:</strong> {{ album.tracks.count }}
+                        <strong>Количество треков:</strong> {{ album.tracks_count }}
                     </p>
                     
                     <p class="mb-2">
@@ -82,7 +86,7 @@
                 <div class="col-md-6">
                     <p class="mb-2">
                         <i class="fas fa-play me-2"></i>
-                        <strong>Прослушиваний:</strong> {{ album.play_count|default:0 }}
+                        <strong>Прослушиваний:</strong> {{ album.total_play_count|default:0 }}
                     </p>
                     
                     {% if album.genres.all %}
@@ -105,14 +109,6 @@
                 </button>
                 
                 {% if user.is_authenticated %}
-                    <button class="btn btn-outline-primary" onclick="addAlbumToPlaylist('{{ album.pk }}')">
-                        <i class="fas fa-plus me-2"></i>В плейлист
-                    </button>
-                    
-                    <button class="btn btn-outline-success" onclick="toggleFavorite()">
-                        <i class="fas fa-heart me-2"></i>В избранное
-                    </button>
-                    
                     <button class="btn btn-outline-info" onclick="shareAlbum()">
                         <i class="fas fa-share me-2"></i>Поделиться
                     </button>
@@ -126,13 +122,13 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="h5 mb-0">
-                        <i class="fas fa-list me-2"></i>Треки альбома ({{ album.tracks.count }})
-                    </h3>
+                        <h3 class="h5 mb-0">
+                            <i class="fas fa-list me-2"></i>Треки альбома ({{ album.tracks_count }})
+                        </h3>
                 </div>
                 
                 <div class="card-body p-0">
-                    {% if album.tracks.all %}
+                    {% if tracks %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
@@ -145,7 +141,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for track in album.tracks.all %}
+                                    {% for track in tracks %}
                                         <tr>
                                             <td class="align-middle">{{ forloop.counter }}</td>
                                             <td class="align-middle">
