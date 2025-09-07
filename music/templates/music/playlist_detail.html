@@ -270,98 +270,150 @@
     {% endif %}
 </div>
 
+<!-- JSON с треками для плеера -->
+<script type="application/json" id="playlist-tracks-data">[
+{% for track in tracks %}
+  {
+    "id": "{{ track.pk }}",
+    "name": "{{ track.name|escapejs }}",
+    "file": "{% if track.file %}{{ track.file.url|escapejs }}{% else %}{% endif %}",
+    "artist": "{% if track.album and track.album.artist %}{{ track.album.artist.name|escapejs }}{% elif track.album and track.album.group %}{{ track.album.group.name|escapejs }}{% else %}Не указан{% endif %}",
+    "album": "{% if track.album %}{{ track.album.name|escapejs }}{% else %}Без альбома{% endif %}",
+    "duration": {{ track.duration|default:0|floatformat:0 }}
+  }{% if not forloop.last %},{% endif %}
+{% endfor %}
+]</script>
+
+<!-- Скрипт аудиоплеера -->
 <script>
-function playPlaylist() {
-    // Начинаем воспроизведение с первого трека
-    const firstTrack = document.querySelector('tbody tr:first-child button[onclick*="playTrack"]');
-    if (firstTrack) {
-        firstTrack.click();
-    } else {
-        alert('В плейлисте нет треков для воспроизведения');
-    }
-}
+(function(){
+  const tracks = JSON.parse(document.getElementById('playlist-tracks-data').textContent || '[]')
+    .filter(t => t.file && t.file.length > 0);
+  let currentIdx = 0;
+  const audio = new Audio();
+  audio.preload = 'metadata';
 
-function playTrack(trackId) {
-    // Здесь можно добавить логику воспроизведения отдельного трека
-    console.log('Воспроизведение трека:', trackId);
-    // В реальном приложении здесь бы был код для воспроизведения аудио
-    alert(`Воспроизведение трека: ${trackId}`);
-}
+  function $id(id){ return document.getElementById(id); }
 
-function ratePlaylist(playlistId, rating) {
-    fetch(`/music/api/playlists/${playlistId}/rate/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({ rating: rating })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Обновляем отображение рейтинга
-            location.reload();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Ошибка оценки:', error);
-        alert('Ошибка при оценке плейлиста');
+  function showBar(){ const bar = $id('audio-bar'); if(bar) bar.style.display = 'block'; }
+  function hideBar(){ const bar = $id('audio-bar'); if(bar) bar.style.display = 'none'; }
+
+  function formatTime(sec){ sec = Number(sec) || 0; const m = Math.floor(sec/60); const s = Math.floor(sec%60).toString().padStart(2,'0'); return `${m}:${s}`; }
+
+  function loadTrack(idx){ if(!tracks.length || idx < 0 || idx >= tracks.length) return; currentIdx = idx; const t = tracks[idx]; audio.src = t.file; const title = $id('audio-track-title'); const meta = $id('audio-track-meta'); if(title) title.textContent = t.name || ''; if(meta) meta.textContent = (t.artist ? t.artist + ' — ' : '') + (t.album || ''); $id('audio-current-time').textContent = '0:00'; $id('audio-duration').textContent = t.duration ? formatTime(t.duration) : ''; const prog = $id('audio-progress'); if(prog) { prog.max = t.duration ? t.duration : 0; prog.value = 0; } }
+
+  function playLoaded(){ audio.play(); $id('audio-play-btn').innerHTML = '<i class="fas fa-pause"></i>'; showBar(); }
+  function pauseLoaded(){ audio.pause(); $id('audio-play-btn').innerHTML = '<i class="fas fa-play"></i>'; }
+
+  function playPause(){ if(audio.paused) playLoaded(); else pauseLoaded(); }
+  function nextTrack(){ if(tracks.length === 0) return; currentIdx = (currentIdx + 1) % tracks.length; loadTrack(currentIdx); playLoaded(); }
+  function prevTrack(){ if(tracks.length === 0) return; if(audio.currentTime > 3){ audio.currentTime = 0; } else { currentIdx = (currentIdx - 1 + tracks.length) % tracks.length; loadTrack(currentIdx); playLoaded(); } }
+
+  audio.addEventListener('timeupdate', function(){ const cur = Math.floor(audio.currentTime); $id('audio-current-time').textContent = formatTime(cur); const prog = $id('audio-progress'); if(prog && !prog.dragging){ prog.value = cur; } });
+  audio.addEventListener('loadedmetadata', function(){ const dur = Math.floor(audio.duration) || 0; $id('audio-duration').textContent = formatTime(dur); const prog = $id('audio-progress'); if(prog) prog.max = dur; });
+  audio.addEventListener('ended', function(){ nextTrack(); });
+
+  document.addEventListener('click', function(e){ if(e.target && e.target.closest('[data-audio-action]')){ const btn = e.target.closest('[data-audio-action]'); const action = btn.getAttribute('data-audio-action'); if(action === 'play') playPause(); if(action === 'next') nextTrack(); if(action === 'prev') prevTrack(); if(action === 'close') { pauseLoaded(); hideBar(); } } });
+
+  const prog = $id('audio-progress');
+  if(prog){
+    // Мгновенная перемотка на вводе
+    prog.addEventListener('input', function(){
+      audio.currentTime = Number(this.value);
+      $id('audio-current-time').textContent = formatTime(this.value);
+      this.dragging = true;
     });
-}
-
-function followPlaylist(playlistId) {
-    // Здесь можно добавить логику подписки на плейлист
-    alert('Функция "Подписаться на плейлист" будет добавлена позже');
-}
-
-function removeTrackFromPlaylist(playlistId, trackId) {
-    if (confirm('Вы уверены, что хотите удалить этот трек из плейлиста?')) {
-        fetch(`/music/api/playlists/${playlistId}/remove-track/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify({ track_id: trackId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Ошибка: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка удаления трека:', error);
-            alert('Ошибка при удалении трека из плейлиста');
-        });
-    }
-}
-
-function deletePlaylist(playlistId) {
-    if (confirm('Вы уверены, что хотите удалить этот плейлист? Это действие нельзя отменить.')) {
-        window.location.href = `{% url 'music:delete_playlist' 0 %}`.replace('0', playlistId);
-    }
-}
-
-function sharePlaylist() {
-    // Копируем ссылку в буфер обмена
-    navigator.clipboard.writeText(window.location.href).then(() => {
-        alert('Ссылка скопирована в буфер обмена!');
-    }).catch(() => {
-        // Fallback для старых браузеров
-        const textArea = document.createElement('textarea');
-        textArea.value = window.location.href;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        alert('Ссылка скопирована в буфер обмена!');
+    prog.addEventListener('change', function(){
+      // ensure value applied
+      audio.currentTime = Number(this.value);
+      this.dragging = false;
     });
-}
+  }
+  const vol = $id('audio-volume');
+  if(vol){ vol.addEventListener('input', function(){ audio.volume = this.value/100; }); audio.volume = vol.value/100; }
+
+  window.playPlaylist = function(){ if(tracks.length === 0){ alert('В плейлисте нет треков для воспроизведения'); return; } loadTrack(0); playLoaded(); }
+  window.playTrack = function(trackId){ const idx = tracks.findIndex(t => t.id == trackId); if(idx === -1){ alert('Трек не найден или не имеет файла'); return; } loadTrack(idx); playLoaded(); }
+
+  // Вставляем функцию удаления трека (должна быть глобальной)
+  window.removeTrackFromPlaylist = function(playlistId, trackId) {
+      if (!confirm('Вы уверены, что хотите удалить этот трек из плейлиста?')) return;
+
+      // Получаем CSRF токен
+      let csrfToken = '';
+      const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+      if (csrfInput) csrfToken = csrfInput.value;
+      else {
+          const match = document.cookie.match(/csrftoken=([^;]+)/);
+          if (match) csrfToken = match[1];
+      }
+
+      fetch(`/api/playlists/${playlistId}/remove-track/`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken || ''
+          },
+          body: JSON.stringify({ track_id: trackId })
+      })
+      .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
+          return response.json();
+      })
+      .then(data => {
+          if (data.success) {
+              // удаляем строку трека из таблицы без перезагрузки
+              const btn = document.querySelector(`button[onclick*="${trackId}"]`);
+              if (btn) {
+                  const tr = btn.closest('tr');
+                  if (tr) tr.remove();
+              }
+          } else {
+              alert('Ошибка: ' + (data.error || 'Не удалось удалить трек'));
+          }
+      })
+      .catch(err => {
+          console.error('Ошибка удаления трека:', err);
+          alert('Ошибка при удалении трека из плейлиста');
+      });
+  }
+
+  if(tracks.length > 0){ loadTrack(0); }
+
+})();
 </script>
+
+<!-- Зеленый аудиобар внизу (темнее) -->
+<style>
+  #audio-bar{ background:#1f7a3a;color:#fff;position:fixed;left:0;right:0;bottom:0;z-index:1200;padding:10px 0;box-shadow:0 -2px 8px rgba(0,0,0,0.3); }
+  #audio-bar .btn{ color:#fff;border-color:rgba(255,255,255,0.15); }
+  #audio-bar .form-range{ background:transparent; }
+  #audio-bar input[type=range]{ -webkit-appearance:none; height:6px; background:rgba(255,255,255,0.12); border-radius:4px; }
+  #audio-bar input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:12px; height:12px; background:#fff; border-radius:50%; box-shadow:0 0 2px rgba(0,0,0,0.4); }
+  #audio-bar input[type=range]::-moz-range-thumb{ width:12px; height:12px; background:#fff; border-radius:50%; }
+</style>
+<div id="audio-bar" style="display:none;">
+  <div class="container d-flex align-items-center">
+    <div class="d-flex align-items-center me-3">
+      <button class="btn btn-sm me-2" id="audio-prev" data-audio-action="prev" title="Назад"><i class="fas fa-step-backward"></i></button>
+      <button class="btn btn-sm me-2" id="audio-play" data-audio-action="play" title="Воспроизведение"><span id="audio-play-btn"><i class="fas fa-play"></i></span></button>
+      <button class="btn btn-sm me-3" id="audio-next" data-audio-action="next" title="Вперёд"><i class="fas fa-step-forward"></i></button>
+      <div>
+        <div id="audio-track-title" style="font-weight:600"></div>
+        <div id="audio-track-meta" style="font-size:0.85em;opacity:0.9"></div>
+      </div>
+    </div>
+
+    <div class="flex-grow-1 mx-3 d-flex align-items-center">
+      <small id="audio-current-time" class="me-2">0:00</small>
+      <input id="audio-progress" type="range" min="0" max="0" value="0" step="1" class="form-range" style="flex:1">
+      <small id="audio-duration" class="ms-2">0:00</small>
+    </div>
+
+    <div class="d-flex align-items-center">
+      <input id="audio-volume" type="range" min="0" max="100" value="80" class="form-range me-2" style="width:110px">
+      <button class="btn btn-sm" data-audio-action="close" title="Закрыть"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+</div>
 {% endblock %}
