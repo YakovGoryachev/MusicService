@@ -270,22 +270,115 @@
     {% endif %}
 </div>
 
+<script type="application/json" id="playlist-tracks-json">
+[
+{% for track in tracks %}
+    {
+        "id": "{{ track.pk }}",
+        "title": "{{ track.name|escapejs }}",
+        "file": "{{ track.file.url|default:'' }}"
+    }{% if not forloop.last %},{% endif %}
+{% endfor %}
+]
+</script>
+
+<!-- Аудиобар для управления воспроизведением -->
+<div id="audioBar" style="position:fixed;bottom:0;left:0;width:100%;background:#198754;color:#fff;z-index:9999;display:none;box-shadow:0 -2px 10px rgba(0,0,0,0.2);">
+    <div class="container py-2 d-flex align-items-center gap-3">
+        <button id="prevTrackBtn" class="btn btn-outline-light btn-sm"><i class="fas fa-step-backward"></i></button>
+        <button id="playPauseBtn" class="btn btn-outline-light btn-sm"><i class="fas fa-play"></i></button>
+        <button id="nextTrackBtn" class="btn btn-outline-light btn-sm"><i class="fas fa-step-forward"></i></button>
+        <span id="trackTitle" class="me-3"></span>
+        <input type="range" id="progressBar" value="0" min="0" max="100" style="width:200px;">
+        <input type="range" id="volumeBar" value="100" min="0" max="100" style="width:100px;">
+        <audio id="audioPlayer" style="display:none;"></audio>
+    </div>
+</div>
 <script>
+let playlistTracks = JSON.parse(document.getElementById('playlist-tracks-json').textContent);
+let currentTrackIdx = 0;
+const audioBar = document.getElementById('audioBar');
+const audioPlayer = document.getElementById('audioPlayer');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const nextTrackBtn = document.getElementById('nextTrackBtn');
+const prevTrackBtn = document.getElementById('prevTrackBtn');
+const trackTitle = document.getElementById('trackTitle');
+const progressBar = document.getElementById('progressBar');
+const volumeBar = document.getElementById('volumeBar');
+
 function playPlaylist() {
-    // Начинаем воспроизведение с первого трека
-    const firstTrack = document.querySelector('tbody tr:first-child button[onclick*="playTrack"]');
-    if (firstTrack) {
-        firstTrack.click();
-    } else {
-        alert('В плейлисте нет треков для воспроизведения');
-    }
+    if (!playlistTracks.length) return;
+    currentTrackIdx = 0;
+    playTrackIdx(currentTrackIdx);
+    audioBar.style.display = 'block';
 }
+function playTrackIdx(idx) {
+    const track = playlistTracks[idx];
+    if (!track || !track.file) return;
+    audioPlayer.src = track.file;
+    audioPlayer.play();
+    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    trackTitle.textContent = track.title;
+}
+playPauseBtn.onclick = function() {
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    } else {
+        audioPlayer.pause();
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    }
+};
+nextTrackBtn.onclick = function() {
+    if (currentTrackIdx < playlistTracks.length - 1) {
+        currentTrackIdx++;
+        playTrackIdx(currentTrackIdx);
+    }
+};
+prevTrackBtn.onclick = function() {
+    if (currentTrackIdx > 0) {
+        currentTrackIdx--;
+        playTrackIdx(currentTrackIdx);
+    }
+};
+audioPlayer.onended = function() {
+    if (currentTrackIdx < playlistTracks.length - 1) {
+        currentTrackIdx++;
+        playTrackIdx(currentTrackIdx);
+    }
+};
+audioPlayer.ontimeupdate = function() {
+    if (audioPlayer.duration) {
+        progressBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+    }
+};
+progressBar.oninput = function() {
+    if (audioPlayer.duration) {
+        audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
+    }
+};
+volumeBar.oninput = function() {
+    audioPlayer.volume = volumeBar.value / 100;
+};
+window.addEventListener('keydown', function(e) {
+    if (audioBar.style.display === 'block') {
+        if (e.code === 'Space') {
+            playPauseBtn.click();
+            e.preventDefault();
+        }
+    }
+});
 
 function playTrack(trackId) {
-    // Здесь можно добавить логику воспроизведения отдельного трека
-    console.log('Воспроизведение трека:', trackId);
-    // В реальном приложении здесь бы был код для воспроизведения аудио
-    alert(`Воспроизведение трека: ${trackId}`);
+    // Найти индекс трека по id и проиграть его через аудиобар
+    const idx = playlistTracks.findIndex(t => t.id == trackId);
+    if (idx !== -1) {
+        currentTrackIdx = idx;
+        playTrackIdx(idx);
+        audioBar.style.display = 'block';
+    } else {
+        alert('Трек не найден или не имеет файла');
+    }
 }
 
 function ratePlaylist(playlistId, rating) {
@@ -319,11 +412,23 @@ function followPlaylist(playlistId) {
 
 function removeTrackFromPlaylist(playlistId, trackId) {
     if (confirm('Вы уверены, что хотите удалить этот трек из плейлиста?')) {
-        fetch(`/music/api/playlists/${playlistId}/remove-track/`, {
+        // Получаем CSRF-токен из cookie, если не найден в форме
+        let csrfToken = null;
+        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfInput) {
+            csrfToken = csrfInput.value;
+        } else {
+            // Попробуем получить из cookie
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            if (match) {
+                csrfToken = match[1];
+            }
+        }
+        fetch(`/api/playlists/${playlistId}/remove-track/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': csrfToken || ''
             },
             body: JSON.stringify({ track_id: trackId })
         })
@@ -344,7 +449,7 @@ function removeTrackFromPlaylist(playlistId, trackId) {
 
 function deletePlaylist(playlistId) {
     if (confirm('Вы уверены, что хотите удалить этот плейлист? Это действие нельзя отменить.')) {
-        window.location.href = `{% url 'music:delete_playlist' 0 %}`.replace('0', playlistId);
+        window.location.href = "/playlist/" + playlistId + "/delete/";
     }
 }
 

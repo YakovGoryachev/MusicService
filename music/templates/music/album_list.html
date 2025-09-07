@@ -88,8 +88,8 @@
         {% for album in albums %}
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="card h-100">
-                    {% if album.photo_url %}
-                        <img src="{{ album.photo_url }}" class="card-img-top" alt="{{ album.name }}" style="height: 250px; object-fit: cover;">
+                    {% if album.photo %}
+                        <img src="{{ album.photo.url }}" class="card-img-top" alt="{{ album.name }}" style="height: 250px; object-fit: cover;">
                     {% else %}
                         <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 250px;">
                             <i class="fas fa-compact-disc fa-4x text-white"></i>

@@ -308,7 +308,7 @@ class Playlist(models.Model):
 class PlaylistTrack(models.Model):
     """Связующая таблица между плейлистами и треками"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, verbose_name='Плейлист')
+    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, verbose_name='Плейлист', related_name='playlist_tracks')
     track = models.ForeignKey(Track, on_delete=models.CASCADE, verbose_name='Трек')
     added_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления')
     

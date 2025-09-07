@@ -113,9 +113,9 @@ def album_list(request):
     
     if query:
         albums = albums.filter(
-            Q(name__icontains=query) |
-            Q(artist__name__icontains=query) |
-            Q(group__name__icontains=query)
+            Q(name__icontains(query)) |
+            Q(artist__name__icontains(query)) |
+            Q(group__name__icontains(query))
         ).distinct()
     
     albums = albums.order_by('-release_date')
@@ -202,7 +202,7 @@ def group_list(request):
     groups = Group.objects.all()
     
     if query:
-        groups = groups.filter(name__icontains=query)
+        groups = groups.filter(name__icontains(query))
     
     groups = groups.order_by('name')
     
@@ -678,6 +678,27 @@ def api_add_track_to_playlist(request, playlist_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@csrf_exempt
+@require_POST
+def api_remove_track_from_playlist(request, playlist_id):
+    """API для удаления трека из плейлиста (AJAX)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    try:
+        data = json.loads(request.body)
+        track_id = data.get('track_id')
+        if not track_id:
+            return JsonResponse({'error': 'ID трека не указан'}, status=400)
+        playlist = get_object_or_404(Playlist, pk=playlist_id, user=request.user)
+        track = get_object_or_404(Track, pk=track_id)
+        if not playlist.tracks.filter(pk=track.pk).exists():
+            return JsonResponse({'error': 'Трек не найден в плейлисте'}, status=404)
+        playlist.tracks.remove(track)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 # Админ панель представления
 @login_required
 def admin_panel(request):
@@ -980,23 +1001,19 @@ def admin_edit_album(request, album_id):
             try:
                 artist = None
                 group = None
-                
                 if artist_id:
                     artist = Artist.objects.get(pk=artist_id)
                 if group_id:
                     group = Group.objects.get(pk=group_id)
-                
                 album.name = name
                 album.artist = artist
                 album.group = group
-                album.release_date = release_date if release_date else None
-                
+                if release_date:
+                    album.release_date = release_date
                 # Обновляем фото только если загружено новое
                 if photo:
                     album.photo = photo
-                
                 album.save()
-                
                 messages.success(request, f'Альбом "{name}" успешно обновлен!')
                 return redirect('music:admin_albums')
             except Exception as e:

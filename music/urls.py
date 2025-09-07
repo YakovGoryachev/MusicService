@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/comments/<uuid:comment_id>/delete/', views.api_delete_comment, name='api_delete_comment'),
     path('api/playlists/', views.api_get_playlists, name='api_get_playlists'),
     path('api/playlists/<uuid:playlist_id>/add-track/', views.api_add_track_to_playlist, name='api_add_track_to_playlist'),
+    path('api/playlists/<uuid:playlist_id>/remove-track/', views.api_remove_track_from_playlist, name='api_remove_track_from_playlist'),
     
     # Админ панель
     path('admin-panel/', views.admin_panel, name='admin_panel'),
@@ -74,4 +75,4 @@ urlpatterns = [
     path('admin-panel/create-genre/', views.admin_create_genre, name='admin_create_genre'),
     path('admin-panel/edit-genre/<uuid:pk>/', views.admin_edit_genre, name='admin_edit_genre'),
     path('admin-panel/delete-genre/<uuid:pk>/', views.admin_delete_genre, name='admin_delete_genre'),
-] 
+]
