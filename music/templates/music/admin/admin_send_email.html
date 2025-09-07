@@ -1,0 +1,37 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Отправка email - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row mt-4">
+    <div class="col-md-8 offset-md-2">
+      <h3>Отправить email-уведомление пользователям</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Тема</label>
+          <input type="text" name="subject" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Сообщение</label>
+          <textarea name="message" class="form-control" rows="6" required></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Кому</label>
+          <select name="target" class="form-select">
+            <option value="all">Всем пользователям</option>
+            {% for u in users %}
+              <option value="user:{{ u.id }}">{{ u.login }} &lt;{{ u.email }}&gt;</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Отправить</button>
+          <a href="{% url 'music:admin_panel' %}" class="btn btn-secondary">Отмена</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

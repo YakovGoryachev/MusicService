@@ -1,5 +1,5 @@
 {% extends 'music/base.html' %}
-
++
 {% block title %}{{ album.name }} - Музыкальный Сервис{% endblock %}
 
 {% block content %}
@@ -446,4 +446,103 @@ function shareAlbum() {
     });
 }
 </script>
+
+<script type="application/json" id="album-tracks-data">[
+{% for track in tracks %}
+  {
+    "id": "{{ track.pk }}",
+    "name": "{{ track.name|escapejs }}",
+    "file": "{% if track.file %}{{ track.file.url|escapejs }}{% else %}{% endif %}",
+    "artist": "{% if track.album and track.album.artist %}{{ track.album.artist.name|escapejs }}{% elif track.album and track.album.group %}{{ track.album.group.name|escapejs }}{% else %}Не указан{% endif %}",
+    "album": "{% if track.album %}{{ track.album.name|escapejs }}{% else %}Без альбома{% endif %}",
+    "duration": {{ track.duration|default:0|floatformat:0 }}
+  }{% if not forloop.last %},{% endif %}
+{% endfor %}
+]</script>
+
+<script>
+(function(){
+  const tracks = JSON.parse(document.getElementById('album-tracks-data').textContent || '[]')
+    .filter(t => t.file && t.file.length > 0);
+  let currentIdx = 0;
+  const audio = new Audio();
+  audio.preload = 'metadata';
+
+  function $id(id){ return document.getElementById(id); }
+
+  function showBar(){ const bar = $id('audio-bar'); if(bar) bar.style.display = 'block'; }
+  function hideBar(){ const bar = $id('audio-bar'); if(bar) bar.style.display = 'none'; }
+
+  function formatTime(sec){ sec = Number(sec) || 0; const m = Math.floor(sec/60); const s = Math.floor(sec%60).toString().padStart(2,'0'); return `${m}:${s}`; }
+
+  function loadTrack(idx){ if(!tracks.length || idx < 0 || idx >= tracks.length) return; currentIdx = idx; const t = tracks[idx]; audio.src = t.file; const title = $id('audio-track-title'); const meta = $id('audio-track-meta'); if(title) title.textContent = t.name || ''; if(meta) meta.textContent = (t.artist ? t.artist + ' — ' : '') + (t.album || ''); $id('audio-current-time').textContent = '0:00'; $id('audio-duration').textContent = t.duration ? formatTime(t.duration) : ''; const prog = $id('audio-progress'); if(prog) { prog.max = t.duration ? t.duration : 0; prog.value = 0; } 
+    // highlight row
+    document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('table-active'));
+    const rows = document.querySelectorAll('tbody tr');
+    if(rows && rows[currentIdx]) rows[currentIdx].classList.add('table-active');
+  }
+
+  function playLoaded(){ audio.play(); $id('audio-play-btn').innerHTML = '<i class="fas fa-pause"></i>'; showBar(); }
+  function pauseLoaded(){ audio.pause(); $id('audio-play-btn').innerHTML = '<i class="fas fa-play"></i>'; }
+
+  function playPause(){ if(audio.paused) playLoaded(); else pauseLoaded(); }
+  function nextTrack(){ if(tracks.length === 0) return; currentIdx = (currentIdx + 1) % tracks.length; loadTrack(currentIdx); playLoaded(); }
+  function prevTrack(){ if(tracks.length === 0) return; if(audio.currentTime > 3){ audio.currentTime = 0; } else { currentIdx = (currentIdx - 1 + tracks.length) % tracks.length; loadTrack(currentIdx); playLoaded(); } }
+
+  audio.addEventListener('timeupdate', function(){ const cur = Math.floor(audio.currentTime); $id('audio-current-time').textContent = formatTime(cur); const prog = $id('audio-progress'); if(prog && !prog.dragging){ prog.value = cur; } });
+  audio.addEventListener('loadedmetadata', function(){ const dur = Math.floor(audio.duration) || 0; $id('audio-duration').textContent = formatTime(dur); const prog = $id('audio-progress'); if(prog) prog.max = dur; });
+  audio.addEventListener('ended', function(){ nextTrack(); });
+
+  document.addEventListener('click', function(e){ if(e.target && e.target.closest('[data-audio-action]')){ const btn = e.target.closest('[data-audio-action]'); const action = btn.getAttribute('data-audio-action'); if(action === 'play') playPause(); if(action === 'next') nextTrack(); if(action === 'prev') prevTrack(); if(action === 'close') { pauseLoaded(); hideBar(); } } });
+
+  const prog = $id('audio-progress');
+  if(prog){
+    prog.addEventListener('input', function(){ audio.currentTime = Number(this.value); $id('audio-current-time').textContent = formatTime(this.value); this.dragging = true; });
+    prog.addEventListener('change', function(){ audio.currentTime = Number(this.value); this.dragging = false; });
+  }
+  const vol = $id('audio-volume');
+  if(vol){ vol.addEventListener('input', function(){ audio.volume = this.value/100; }); audio.volume = vol.value/100; }
+
+  window.playAlbum = function(){ if(tracks.length === 0){ alert('В альбоме нет треков для воспроизведения'); return; } loadTrack(0); playLoaded(); }
+  window.playTrack = function(trackId){ const idx = tracks.findIndex(t => t.id == trackId); if(idx === -1){ alert('Трек не найден или не имеет файла'); return; } loadTrack(idx); playLoaded(); }
+
+  if(tracks.length > 0){ loadTrack(0); }
+
+})();
+</script>
+
+<!-- Зеленый аудиобар внизу (темнее) -->
+<style>
+  #audio-bar{ background:#1f7a3a;color:#fff;position:fixed;left:0;right:0;bottom:0;z-index:1200;padding:10px 0;box-shadow:0 -2px 8px rgba(0,0,0,0.3); }
+  #audio-bar .btn{ color:#fff;border-color:rgba(255,255,255,0.15); }
+  #audio-bar .form-range{ background:transparent; }
+  #audio-bar input[type=range]{ -webkit-appearance:none; height:6px; background:rgba(255,255,255,0.12); border-radius:4px; }
+  #audio-bar input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:12px; height:12px; background:#fff; border-radius:50%; box-shadow:0 0 2px rgba(0,0,0,0.4); }
+  #audio-bar input[type=range]::-moz-range-thumb{ width:12px; height:12px; background:#fff; border-radius:50%; }
+</style>
+<div id="audio-bar" style="display:none;">
+  <div class="container d-flex align-items-center">
+    <div class="d-flex align-items-center me-3">
+      <button class="btn btn-sm me-2" id="audio-prev" data-audio-action="prev" title="Назад"><i class="fas fa-step-backward"></i></button>
+      <button class="btn btn-sm me-2" id="audio-play" data-audio-action="play" title="Воспроизведение"><span id="audio-play-btn"><i class="fas fa-play"></i></span></button>
+      <button class="btn btn-sm me-3" id="audio-next" data-audio-action="next" title="Вперёд"><i class="fas fa-step-forward"></i></button>
+      <div>
+        <div id="audio-track-title" style="font-weight:600"></div>
+        <div id="audio-track-meta" style="font-size:0.85em;opacity:0.9"></div>
+      </div>
+    </div>
+
+    <div class="flex-grow-1 mx-3 d-flex align-items-center">
+      <small id="audio-current-time" class="me-2">0:00</small>
+      <input id="audio-progress" type="range" min="0" max="0" value="0" step="1" class="form-range" style="flex:1">
+      <small id="audio-duration" class="ms-2">0:00</small>
+    </div>
+
+    <div class="d-flex align-items-center">
+      <input id="audio-volume" type="range" min="0" max="100" value="80" class="form-range me-2" style="width:110px">
+      <button class="btn btn-sm" data-audio-action="close" title="Закрыть"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

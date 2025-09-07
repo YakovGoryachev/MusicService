@@ -17,14 +17,30 @@
                     <form method="POST">
                         {% csrf_token %}
                         
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                {% for error in form.non_field_errors %}
-                                    {{ error }}
-                                {% endfor %}
+                        {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {% if message.tags == 'success' %}
+                                    <i class="fas fa-check-circle me-2"></i>
+                                {% elif message.tags == 'error' %}
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
-                        {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
 
                         <div class="mb-3">
                             <label for="{{ form.login.id_for_label }}" class="form-label">
@@ -33,11 +49,15 @@
                             {{ form.login }}
                             {% if form.login.errors %}
                                 <div class="invalid-feedback d-block">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
                                     {% for error in form.login.errors %}
                                         {{ error }}
                                     {% endfor %}
                                 </div>
                             {% endif %}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>Введите ваш логин для входа
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -47,11 +67,15 @@
                             {{ form.password }}
                             {% if form.password.errors %}
                                 <div class="invalid-feedback d-block">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
                                     {% for error in form.password.errors %}
                                         {{ error }}
                                     {% endfor %}
                                 </div>
                             {% endif %}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>Введите ваш пароль
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -83,7 +107,7 @@
             </div>
 
             <!-- Демо аккаунт -->
-            <div class="card mt-4">
+            <!-- <div class="card mt-4">
                 <div class="card-header">
                     <h3 class="h5 mb-0">
                         <i class="fas fa-info-circle me-2"></i>Демо аккаунт
@@ -100,7 +124,7 @@
                         Демо аккаунт имеет ограниченные права
                     </small>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Помощь -->
             <div class="card mt-4">
@@ -181,10 +205,28 @@ hr {
 .alert {
     border-radius: 0.5rem;
     border: none;
+    animation: fadeIn 0.5s;
 }
 
 .bg-light {
     background-color: #f8f9fa !important;
+}
+
+.invalid-feedback {
+    font-size: 0.875rem;
+    color: #dc3545;
+    margin-top: 0.25rem;
+    animation: fadeIn 0.3s;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 </style>
 {% endblock %}

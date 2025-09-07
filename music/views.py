@@ -14,6 +14,10 @@ from .models import (
 )
 from .forms import UserRegistrationForm, UserLoginForm, PlaylistForm, CommentForm, TrackCreateForm
 import json
+from django.core.mail import send_mass_mail, EmailMessage
+from django.http import HttpResponse
+import io
+from django.db.models import Count, Sum
 
 
 def home(request):
@@ -485,16 +489,22 @@ def user_login(request):
             user = authenticate(request, username=user_login, password=password)
             
             if user is not None:
-                login(request, user)
-                messages.success(request, f'Добро пожаловать, {user.login}!')
-                return redirect('music:home')
+                if user.is_active:
+                    login(request, user)
+                    messages.success(request, f'Добро пожаловать, {user.login}!')
+                    # Redirect to next URL if it exists, otherwise to home
+                    next_url = request.GET.get('next')
+                    return redirect(next_url if next_url else 'music:home')
+                else:
+                    form.add_error(None, 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.')
             else:
-                messages.error(request, 'Неверный логин или пароль!')
+                form.add_error(None, 'Неверный логин или пароль. Пожалуйста, проверьте введенные данные.')
     else:
         form = UserLoginForm()
     
     context = {
         'form': form,
+        'next': request.GET.get('next', '')
     }
     return render(request, 'music/login.html', context)
 
@@ -678,6 +688,27 @@ def api_add_track_to_playlist(request, playlist_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@csrf_exempt
+@require_POST
+def api_remove_track_from_playlist(request, playlist_id):
+    """API для удаления трека из плейлиста (AJAX)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    try:
+        data = json.loads(request.body)
+        track_id = data.get('track_id')
+        if not track_id:
+            return JsonResponse({'error': 'ID трека не указан'}, status=400)
+        playlist = get_object_or_404(Playlist, pk=playlist_id, user=request.user)
+        track = get_object_or_404(Track, pk=track_id)
+        if not playlist.tracks.filter(pk=track.pk).exists():
+            return JsonResponse({'error': 'Трек не найден в плейлисте'}, status=404)
+        playlist.tracks.remove(track)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 # Админ панель представления
 @login_required
 def admin_panel(request):
@@ -699,6 +730,158 @@ def admin_panel(request):
         'total_groups': total_groups,
     }
     return render(request, 'music/admin/admin_panel.html', context)
+
+
+@login_required
+def admin_send_email(request):
+    """Отправка email-уведомлений пользователям (только для админа)"""
+    if not request.user.role == 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:admin_panel')
+
+    users = User.objects.all().values('id', 'login', 'email')
+
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '').strip()
+        message = request.POST.get('message', '').strip()
+        target = request.POST.get('target', 'all')
+
+        if not subject or not message:
+            messages.error(request, 'Тема и сообщение обязательны')
+            return redirect('music:admin_send_email')
+
+        recipients = []
+        if target == 'all':
+            recipients = [u['email'] for u in users if u['email']]
+        elif target.startswith('user:'):
+            uid = target.split(':', 1)[1]
+            user = User.objects.filter(pk=uid).first()
+            if user and user.email:
+                recipients = [user.email]
+
+        # Отправляем письма через EmailMessage (для dev режим печатаются в консоль)
+        try:
+            for email in recipients:
+                msg = EmailMessage(subject=subject, body=message, to=[email])
+                msg.send(fail_silently=False)
+
+            messages.success(request, f'Отправлено {len(recipients)} писем')
+            return redirect('music:admin_panel')
+        except Exception as e:
+            messages.error(request, f'Ошибка отправки: {str(e)}')
+            return redirect('music:admin_send_email')
+
+    context = {
+        'users': users,
+    }
+    return render(request, 'music/admin/admin_send_email.html', context)
+
+
+@login_required
+def admin_reports(request):
+    if not request.user.role == 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:admin_panel')
+
+    return render(request, 'music/admin/admin_reports.html')
+
+
+@login_required
+def admin_generate_report(request):
+    """Generate Excel or PDF reports with top tracks/artists/albums and rating extremes."""
+    if not request.user.role == 'admin':
+        messages.error(request, 'Доступ запрещен. Требуются права администратора.')
+        return redirect('music:admin_panel')
+
+    fmt = request.GET.get('format', 'xlsx')
+
+    # Gather stats
+    top_tracks = Track.objects.annotate(cnt=Sum('play_count')).order_by('-cnt')[:20]
+    top_artists = Artist.objects.annotate(albums_count=Count('album')).order_by('-albums_count')[:20]
+    top_albums = Album.objects.annotate(cnt=Sum('play_count')).order_by('-cnt')[:20]
+
+    # Best and worst rated tracks
+    best_tracks = Track.objects.annotate(avg=Avg('ratings__value')).order_by('-avg')[:20]
+    worst_tracks = Track.objects.annotate(avg=Avg('ratings__value')).order_by('avg')[:20]
+
+    if fmt == 'xlsx':
+        try:
+            import openpyxl
+            from openpyxl.utils import get_column_letter
+        except Exception:
+            messages.error(request, 'Требуется пакет openpyxl для генерации Excel. Установите его: pip install openpyxl')
+            return redirect('music:admin_reports')
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Top Tracks'
+        ws.append(['#','Track','Plays','Artist','Album'])
+        for i, t in enumerate(top_tracks, start=1):
+            ws.append([i, t.name, t.play_count or 0, t.album.artist.name if t.album and t.album.artist else '', t.album.name if t.album else ''])
+
+        ws2 = wb.create_sheet('Top Artists')
+        ws2.append(['#','Artist','Albums'])
+        for i, a in enumerate(top_artists, start=1):
+            ws2.append([i, a.name, a.albums_count])
+
+        ws3 = wb.create_sheet('Top Albums')
+        ws3.append(['#','Album','Plays','Artist'])
+        for i, a in enumerate(top_albums, start=1):
+            ws3.append([i, a.name, a.play_count or 0, a.artist.name if a.artist else ''])
+
+        ws4 = wb.create_sheet('Best Tracks')
+        ws4.append(['#','Track','AvgRating'])
+        for i, t in enumerate(best_tracks, start=1):
+            ws4.append([i, t.name, round(t.avg or 0,2)])
+
+        ws5 = wb.create_sheet('Worst Tracks')
+        ws5.append(['#','Track','AvgRating'])
+        for i, t in enumerate(worst_tracks, start=1):
+            ws5.append([i, t.name, round(t.avg or 0,2)])
+
+        out = io.BytesIO()
+        wb.save(out)
+        out.seek(0)
+
+        response = HttpResponse(out.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="music_report.xlsx"'
+        return response
+
+    elif fmt == 'pdf':
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+        except Exception:
+            messages.error(request, 'Требуется пакет reportlab для генерации PDF. Установите его: pip install reportlab')
+            return redirect('music:admin_reports')
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        y = height - 40
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(40, y, 'Music Service - Report')
+        y -= 30
+        c.setFont('Helvetica-Bold', 12)
+        c.drawString(40, y, 'Top Tracks')
+        y -= 20
+        c.setFont('Helvetica', 10)
+        for i, t in enumerate(top_tracks[:20], start=1):
+            line = f"{i}. {t.name} — plays: {t.play_count or 0}"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+        return HttpResponse(buffer, content_type='application/pdf')
+
+    else:
+        messages.error(request, 'Неподдерживаемый формат')
+        return redirect('music:admin_reports')
 
 
 @login_required
@@ -980,23 +1163,19 @@ def admin_edit_album(request, album_id):
             try:
                 artist = None
                 group = None
-                
                 if artist_id:
                     artist = Artist.objects.get(pk=artist_id)
                 if group_id:
                     group = Group.objects.get(pk=group_id)
-                
                 album.name = name
                 album.artist = artist
                 album.group = group
-                album.release_date = release_date if release_date else None
-                
+                if release_date:
+                    album.release_date = release_date
                 # Обновляем фото только если загружено новое
                 if photo:
                     album.photo = photo
-                
                 album.save()
-                
                 messages.success(request, f'Альбом "{name}" успешно обновлен!')
                 return redirect('music:admin_albums')
             except Exception as e:

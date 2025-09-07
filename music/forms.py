@@ -39,24 +39,33 @@ class UserLoginForm(forms.Form):
     """Форма входа пользователя"""
     login = forms.CharField(
         label='Логин',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите логин'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Введите логин',
+            'autofocus': True
+        })
     )
     password = forms.CharField(
         label='Пароль',
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Введите пароль'})
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Введите пароль'
+        })
     )
     
-    def clean_login(self):
-        login = self.cleaned_data.get('login')
-        if not login:
+    def clean(self):
+        cleaned_data = super().clean()
+        login = cleaned_data.get('login')
+        password = cleaned_data.get('password')
+        
+        if not login and not password:
+            raise forms.ValidationError('Введите логин и пароль')
+        elif not login:
             raise forms.ValidationError('Введите логин')
-        return login
-    
-    def clean_password(self):
-        password = self.cleaned_data.get('password')
-        if not password:
+        elif not password:
             raise forms.ValidationError('Введите пароль')
-        return password
+            
+        return cleaned_data
 
 
 class PlaylistForm(forms.ModelForm):

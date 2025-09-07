@@ -99,7 +99,7 @@
             </div>
 
             <!-- Последние действия -->
-            <div class="row">
+            <!-- <div class="row">
                 <div class="col-12">
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
@@ -115,7 +115,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Управление контентом -->
             <div class="row">
@@ -189,6 +189,7 @@
                                     </div>
                                 </div>
                             </div>
+                            
                             <div class="row">
                                 <div class="col-md-3 mb-3">
                                     <div class="card border-secondary">
@@ -201,6 +202,20 @@
                                             </a>
                                             <a href="{% url 'music:admin_create_genre' %}" class="btn btn-outline-secondary btn-sm">
                                                 <i class="fas fa-plus me-1"></i>Добавить
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-3 mb-3">
+                                    <div class="card border-dark">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-envelope fa-2x text-dark mb-2"></i>
+                                            <h6 class="card-title">Рассылка</h6>
+                                            <p class="card-text small text-muted">Отправка email-уведомлений пользователям</p>
+                                            <a href="{% url 'music:admin_send_email' %}" class="btn btn-dark btn-sm">
+                                                <i class="fas fa-paper-plane me-1"></i>Отправить
                                             </a>
                                         </div>
                                     </div>

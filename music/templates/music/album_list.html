@@ -29,7 +29,7 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-body">
+                <!-- <div class="card-body">
                     <h6 class="card-title mb-3">
                         <i class="fas fa-filter me-2"></i>Фильтры
                     </h6>
@@ -73,13 +73,13 @@
                                 <i class="fas fa-times me-1"></i>Сбросить
                             </a>
                         </div>
-                        <!-- Сохраняем поисковый запрос -->
-                        {% if request.GET.q %}
+                        Сохраняем поисковый запрос -->
+                        <!-- {% if request.GET.q %}
                             <input type="hidden" name="q" value="{{ request.GET.q }}">
                         {% endif %}
                     </form>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
 
@@ -88,8 +88,8 @@
         {% for album in albums %}
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="card h-100">
-                    {% if album.photo_url %}
-                        <img src="{{ album.photo_url }}" class="card-img-top" alt="{{ album.name }}" style="height: 250px; object-fit: cover;">
+                    {% if album.photo %}
+                        <img src="{{ album.photo.url }}" class="card-img-top" alt="{{ album.name }}" style="height: 250px; object-fit: cover;">
                     {% else %}
                         <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 250px;">
                             <i class="fas fa-compact-disc fa-4x text-white"></i>
@@ -139,24 +139,24 @@
 
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <small class="text-muted">
+                                <!-- <small class="text-muted">
                                     <i class="fas fa-play me-1"></i>{{ album.play_count|default:0 }} прослушиваний
-                                </small>
-                                <div class="d-flex align-items-center">
+                                </small> -->
+                                <!-- <div class="d-flex align-items-center">
                                     <i class="fas fa-star text-warning me-1"></i>
                                     <small class="text-muted">{{ album.average_rating|default:"0.0"|floatformat:1 }}</small>
-                                </div>
+                                </div> -->
                             </div>
                             
                             <div class="d-flex gap-2">
                                 <a href="{% url 'music:album_detail' album.pk %}" class="btn btn-primary flex-fill">
                                     <i class="fas fa-eye me-1"></i>Просмотр
                                 </a>
-                                {% if user.is_authenticated %}
+                                <!-- {% if user.is_authenticated %}
                                     <button class="btn btn-outline-primary" onclick="addAlbumToPlaylist('{{ album.pk }}')" title="Добавить все треки в плейлист">
                                         <i class="fas fa-plus"></i>
                                     </button>
-                                {% endif %}
+                                {% endif %} -->
                             </div>
                         </div>
                     </div>

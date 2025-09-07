@@ -1,0 +1,27 @@
+{% extends 'music/base.html' %}
+
+{% block title %}Генерация отчётов - Админ панель{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <h3>Генерация отчётов</h3>
+      <p>Выберите формат и скачайте сводный отчёт.</p>
+      <div class="card p-3">
+        <form method="get" action="{% url 'music:admin_generate_report' %}">
+          <div class="mb-3">
+            <label class="form-label">Формат</label>
+            <select name="format" class="form-select">
+              <option value="xlsx">Excel (.xlsx)</option>
+              <option value="pdf">PDF</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="submit">Сгенерировать и скачать</button>
+          <a href="{% url 'music:admin_panel' %}" class="btn btn-secondary">Отмена</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
