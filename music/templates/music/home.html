@@ -61,10 +61,12 @@
             {% for track in latest_tracks %}
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                     <div class="card h-100">
-                        {% if track.album.photo_url %}
-                            <img src="{{ track.album.photo_url }}" class="card-img-top" alt="{{ track.name }}">
+                        {% if track.photo %}
+                            <img src="{{ track.photo.url }}" class="card-img-top" alt="{{ track.name }}" style="height: 200px; object-fit: cover;">
+                        {% elif track.album.photo_url %}
+                            <img src="{{ track.album.photo_url }}" class="card-img-top" alt="{{ track.name }}" style="height: 200px; object-fit: cover;">
                         {% else %}
-                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center">
+                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
                                 <i class="fas fa-music fa-3x text-white"></i>
                             </div>
                         {% endif %}

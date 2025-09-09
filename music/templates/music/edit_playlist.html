@@ -46,18 +46,24 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="{{ form.photo_url.id_for_label }}" class="form-label">
+                            <label for="{{ form.photo.id_for_label }}" class="form-label">
                                 <i class="fas fa-image me-2"></i>Обложка плейлиста
                             </label>
-                            {{ form.photo_url }}
-                            {% if form.photo_url.errors %}
+                            {{ form.photo }}
+                            {% if playlist.photo %}
+                                <div class="form-text mt-2">
+                                    Текущая обложка:
+                                    <img src="{{ playlist.photo.url }}" alt="Обложка" class="img-thumbnail ms-2" style="max-height: 80px;">
+                                </div>
+                            {% endif %}
+                            {% if form.photo.errors %}
                                 <div class="invalid-feedback d-block">
-                                    {% for error in form.photo_url.errors %}
+                                    {% for error in form.photo.errors %}
                                         {{ error }}
                                     {% endfor %}
                                 </div>
                             {% endif %}
-                            <div class="form-text">URL изображения для обложки плейлиста</div>
+                            <div class="form-text">Загрузите файл изображения (JPG, PNG, WebP)</div>
                         </div>
 
                         <div class="mb-3">

@@ -75,6 +75,18 @@
                         </div>
                         
                         <div class="mb-3">
+                            <label for="photo" class="form-label">Фото трека</label>
+                            <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                            {% if track.photo %}
+                                <div class="form-text">
+                                    Текущее фото: 
+                                    <img src="{{ track.photo.url }}" alt="Фото трека" class="img-thumbnail" style="max-width: 100px; max-height: 100px;">
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Выберите новое фото (необязательно)</div>
+                        </div>
+                        
+                        <div class="mb-3">
                             <label class="form-label">Жанры</label>
                             <div class="row">
                                 {% for genre in genres %}

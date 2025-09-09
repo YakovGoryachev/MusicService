@@ -61,6 +61,7 @@
                         <table class="table table-bordered" id="tracksTable">
                             <thead>
                                 <tr>
+                                    <th>Фото</th>
                                     <th>Название</th>
                                     <th>Альбом</th>
                                     <th>Артист/Группа</th>
@@ -73,6 +74,15 @@
                             <tbody>
                                 {% for track in tracks %}
                                 <tr>
+                                    <td>
+                                        {% if track.photo %}
+                                            <img src="{{ track.photo.url }}" alt="Фото трека" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-light d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                                <i class="fas fa-music text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <strong>{{ track.name }}</strong>
                                         {% if track.file_url %}

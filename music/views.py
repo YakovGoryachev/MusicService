@@ -169,7 +169,13 @@ def artist_list(request):
     """Список артистов"""
     query = request.GET.get('q', '')
     
-    artists = Artist.objects.all()
+    artists = (
+        Artist.objects.all()
+        .annotate(
+            album_count=Count('album', distinct=True),
+            track_count=Count('album__track', distinct=True),
+        )
+    )
     
     if query:
         artists = artists.filter(name__icontains=query)
@@ -191,10 +197,16 @@ def artist_detail(request, pk):
     """Детальная страница артиста"""
     artist = get_object_or_404(Artist, pk=pk)
     albums = artist.album_set.all().order_by('-release_date')
+    tracks = Track.objects.filter(album__artist=artist).select_related('album').prefetch_related('genres').order_by('-play_count', '-id')
+    artist_album_count = albums.count()
+    artist_track_count = tracks.count()
     
     context = {
         'artist': artist,
         'albums': albums,
+        'tracks': tracks,
+        'artist_album_count': artist_album_count,
+        'artist_track_count': artist_track_count,
     }
     return render(request, 'music/artist_detail.html', context)
 
@@ -322,7 +334,7 @@ def create_playlist(request):
                     name=name,
                     description=description,
                     is_public=not is_private,
-                    photo=photo
+                    photo=photo,
                 )
                 messages.success(request, f'Плейлист "{name}" создан успешно!')
                 return redirect('music:playlist_detail', pk=playlist.pk)
@@ -346,9 +358,10 @@ def edit_playlist(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk, user=request.user)
     
     if request.method == 'POST':
-        form = PlaylistForm(request.POST, instance=playlist)
+        form = PlaylistForm(request.POST, request.FILES, instance=playlist)
         if form.is_valid():
-            form.save()
+            playlist = form.save()
+            # genres уже сохраняются ModelForm'ой через m2m, фото берётся из FILES
             messages.success(request, 'Плейлист обновлен!')
             return redirect('music:playlist_detail', pk=playlist.pk)
     else:
@@ -530,12 +543,44 @@ def user_logout(request):
 @login_required
 def profile(request):
     """Профиль пользователя"""
+    from django.db.models import Count, Sum
+
+    # Плейлисты пользователя
     user_playlists = Playlist.objects.filter(user=request.user).prefetch_related('tracks')
+    recent_playlists = user_playlists.order_by('-creation_date')[:6]
+
+    # Статистика
+    playlists_count = user_playlists.count()
+    total_tracks = sum(playlist.tracks.count() for playlist in user_playlists)
+    total_duration = sum(
+        sum(track.duration or 0 for track in playlist.tracks.all())
+        for playlist in user_playlists
+    )
+    total_play_count = sum(
+        sum(track.play_count for track in playlist.tracks.all())
+        for playlist in user_playlists
+    )
+
+    # Оценки пользователя
     user_ratings = TrackRating.objects.filter(user=request.user).select_related('track', 'track__album')
-    
+
+    # Недавняя активность (оценки)
+    recent_activity = []
+    for rating in user_ratings.order_by('-rating_date')[:5]:
+        recent_activity.append({
+            'description': f'Оценил трек "{rating.track.name}" на {rating.value} звезд',
+            'timestamp': rating.rating_date
+        })
+
     context = {
         'user_playlists': user_playlists,
+        'recent_playlists': recent_playlists,
         'user_ratings': user_ratings,
+        'playlists_count': playlists_count,
+        'total_tracks': total_tracks,
+        'total_duration': total_duration,
+        'total_play_count': total_play_count,
+        'recent_activity': recent_activity,
     }
     return render(request, 'music/profile.html', context)
 
@@ -1381,6 +1426,7 @@ def admin_create_track(request):
                 track = Track.objects.create(
                     name=name,
                     file=file,
+                    photo=form.cleaned_data.get('photo'),
                     album=album,
                     duration=duration
                 )
@@ -1443,6 +1489,10 @@ def admin_edit_track(request, pk):
                 # Обработка загрузки нового файла
                 if 'file' in request.FILES:
                     track.file = request.FILES['file']
+                
+                # Обработка загрузки нового фото
+                if 'photo' in request.FILES:
+                    track.photo = request.FILES['photo']
                 
                 # Обработка артиста
                 artist = None

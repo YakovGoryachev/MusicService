@@ -192,6 +192,7 @@ class Track(models.Model):
     album = models.ForeignKey(Album, on_delete=models.CASCADE, verbose_name='Альбом', null=True, blank=True)
     duration = models.PositiveIntegerField(verbose_name='Продолжительность (в секундах)', null=True, blank=True)
     file = models.FileField(upload_to='tracks/', verbose_name='Файл трека', null=True, blank=True)
+    photo = models.ImageField(upload_to='track_photos/', verbose_name='Фото трека', null=True, blank=True)
     play_count = models.PositiveIntegerField(default=0, verbose_name='Количество прослушиваний')
     genres = models.ManyToManyField(Genre, through='TrackGenre', verbose_name='Жанры')
     
@@ -290,6 +291,7 @@ class Playlist(models.Model):
     photo = models.ImageField(upload_to='playlists/', null=True, blank=True, verbose_name='Фото плейлиста')
     creation_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     tracks = models.ManyToManyField(Track, through='PlaylistTrack', verbose_name='Треки')
+    genres = models.ManyToManyField(Genre, blank=True, verbose_name='Жанры')
     
     class Meta:
         db_table = 'плейлисты'

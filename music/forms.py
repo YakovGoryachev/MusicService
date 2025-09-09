@@ -72,7 +72,7 @@ class PlaylistForm(forms.ModelForm):
     """Форма создания/редактирования плейлиста"""
     class Meta:
         model = Playlist
-        fields = ['name', 'description', 'is_public', 'photo']
+        fields = ['name', 'description', 'is_public', 'photo', 'genres']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -89,6 +89,9 @@ class PlaylistForm(forms.ModelForm):
             'photo': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': 'image/*'
+            }),
+            'genres': forms.SelectMultiple(attrs={
+                'class': 'form-select'
             })
         }
     
@@ -182,7 +185,7 @@ class TrackCreateForm(forms.ModelForm):
     
     class Meta:
         model = Track
-        fields = ['name', 'file', 'duration']
+        fields = ['name', 'file', 'photo', 'duration']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -191,6 +194,10 @@ class TrackCreateForm(forms.ModelForm):
             'file': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': 'audio/*'
+            }),
+            'photo': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
             }),
             'duration': forms.NumberInput(attrs={
                 'class': 'form-control',

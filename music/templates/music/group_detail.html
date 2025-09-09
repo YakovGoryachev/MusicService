@@ -142,6 +142,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th scope="col" style="width: 50px;">#</th>
+                                        <th scope="col" style="width: 60px;">Фото</th>
                                         <th scope="col">Название</th>
                                         <th scope="col">Альбом</th>
                                         <th scope="col" style="width: 120px;">Длительность</th>
@@ -153,6 +154,15 @@
                                     {% for track in tracks|slice:":10" %}
                                         <tr>
                                             <td class="align-middle">{{ forloop.counter }}</td>
+                                            <td class="align-middle">
+                                                {% if track.photo %}
+                                                    <img src="{{ track.photo.url }}" alt="Фото трека" class="img-thumbnail" style="width: 40px; height: 40px; object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="fas fa-music text-muted"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </td>
                                             <td class="align-middle">
                                                 <div>
                                                     <strong>{{ track.name }}</strong>

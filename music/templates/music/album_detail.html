@@ -1,5 +1,5 @@
 {% extends 'music/base.html' %}
-+
+
 {% block title %}{{ album.name }} - Музыкальный Сервис{% endblock %}
 
 {% block content %}
@@ -41,25 +41,13 @@
                 
                 <div class="text-end">
                     <div class="mb-2">
-                        <span class="h4 text-warning">
+                        <!-- <span class="h4 text-warning">
                             <i class="fas fa-star"></i> {{ avg_rating|default:"0.0"|floatformat:1 }}
                         </span>
-                        <small class="text-muted d-block">({{ ratings.count }} оценок)</small>
+                        <small class="text-muted d-block">({{ ratings.count }} оценок)</small> -->
                     </div>
                     
-                    {% if user.is_authenticated %}
-                        <div class="rating-buttons mb-2">
-                            {% for i in "12345" %}
-                                <button class="btn btn-sm {% if user_rating and user_rating.value == i|add:0 %}btn-warning{% else %}btn-outline-warning{% endif %} rating-btn" 
-                                        data-rating="{{ i }}" onclick="rateAlbum('{{ album.pk }}', {{ i }})">
-                                    {{ i }}
-                                </button>
-                            {% endfor %}
-                        </div>
-                        {% if user_rating %}
-                            <small class="text-muted">Ваша оценка: {{ user_rating.value }}</small>
-                        {% endif %}
-                    {% endif %}
+                    <!-- Убраны кнопки оценки альбома и отображение пользовательской оценки -->
                 </div>
             </div>
             
@@ -283,29 +271,7 @@ function playTrack(trackId) {
     alert('Воспроизведение трека');
 }
 
-function rateAlbum(albumId, rating) {
-    fetch(`/music/api/albums/${albumId}/rate/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({ rating: rating })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Обновляем отображение рейтинга
-            location.reload();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Ошибка оценки:', error);
-        alert('Ошибка при оценке альбома');
-    });
-}
+// Удалена функция rateAlbum и кнопки оценки альбома
 
 function addAlbumToPlaylist(albumId) {
     // Загружаем список плейлистов пользователя

@@ -78,6 +78,22 @@
                                     <div class="form-text">Поддерживаемые форматы: MP3, WAV, FLAC, OGG</div>
                                 </div>
 
+                                <!-- Фото трека -->
+                                <div class="mb-3">
+                                    <label for="{{ form.photo.id_for_label }}" class="form-label">
+                                        <i class="fas fa-image me-2"></i>{{ form.photo.label }}
+                                    </label>
+                                    {{ form.photo }}
+                                    {% if form.photo.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.photo.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Поддерживаемые форматы: JPG, PNG, GIF, WebP (необязательно)</div>
+                                </div>
+
                                 <!-- Артист или группа -->
                                 <div class="row mb-3">
                                     <div class="col-md-6">

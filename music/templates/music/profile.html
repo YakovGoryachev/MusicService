@@ -123,8 +123,8 @@
                             {% for playlist in recent_playlists %}
                                 <div class="col-lg-4 col-md-6 mb-3">
                                     <div class="card h-100">
-                                        {% if playlist.photo_url %}
-                                            <img src="{{ playlist.photo_url }}" class="card-img-top" alt="{{ playlist.name }}" style="height: 150px; object-fit: cover;">
+                                        {% if playlist.photo %}
+                                            <img src="{{ playlist.photo.url }}" class="card-img-top" alt="{{ playlist.name }}" style="height: 150px; object-fit: cover;">
                                         {% else %}
                                             <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 150px;">
                                                 <i class="fas fa-playlist fa-3x text-white"></i>
