@@ -12,6 +12,7 @@ urlpatterns = [
     path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('profile/toggle-admin/', views.toggle_admin_role, name='toggle_admin_role'),
     
     # Треки
     path('tracks/', views.track_list, name='track_list'),

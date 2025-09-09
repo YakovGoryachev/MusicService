@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="container">
+    {% csrf_token %}
     <!-- Заголовок профиля -->
     <div class="row mb-4">
         <div class="col-12">
@@ -53,6 +54,16 @@
                                 <a href="#" class="btn btn-outline-secondary" onclick="changePassword()">
                                     <i class="fas fa-key me-2"></i>Сменить пароль
                                 </a>
+                                <button class="btn btn-outline-warning" onclick="toggleAdminRole()" id="toggleAdminBtn">
+                                    <i class="fas fa-user-shield me-2"></i>
+                                    <span id="toggleAdminText">
+                                        {% if user.role == 'admin' %}
+                                            Убрать админ права
+                                        {% else %}
+                                            Сделать администратором
+                                        {% endif %}
+                                    </span>
+                                </button>
                                 {% if user.role == 'admin' %}
                                     <a href="{% url 'music:admin_panel' %}" class="btn btn-outline-success">
                                         <i class="fas fa-cog me-2"></i>Админ панель
@@ -219,6 +230,68 @@ function removeFromFavorites(trackId) {
     if (confirm('Убрать трек из избранного?')) {
         // Здесь можно добавить логику удаления из избранного
         alert('Трек убран из избранного');
+    }
+}
+
+function toggleAdminRole() {
+    if (confirm('Вы уверены, что хотите изменить роль пользователя?')) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        console.log('CSRF Token:', csrfToken);
+        
+        fetch('{% url "music:toggle_admin_role" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                // Обновляем текст кнопки и бейдж роли
+                const toggleText = document.getElementById('toggleAdminText');
+                const roleBadge = document.querySelector('.badge');
+                
+                if (data.new_role === 'admin') {
+                    toggleText.textContent = 'Убрать админ права';
+                    roleBadge.textContent = 'Администратор';
+                    roleBadge.className = 'badge bg-danger align-middle ms-2';
+                    
+                    // Показываем кнопку админ панели если её нет
+                    const adminPanelBtn = document.querySelector('a[href*="admin-panel"]');
+                    if (!adminPanelBtn) {
+                        const buttonContainer = document.querySelector('.d-grid.gap-2');
+                        const newAdminBtn = document.createElement('a');
+                        newAdminBtn.href = '{% url "music:admin_panel" %}';
+                        newAdminBtn.className = 'btn btn-outline-success';
+                        newAdminBtn.innerHTML = '<i class="fas fa-cog me-2"></i>Админ панель';
+                        buttonContainer.appendChild(newAdminBtn);
+                    }
+                } else {
+                    toggleText.textContent = 'Сделать администратором';
+                    roleBadge.textContent = 'Пользователь';
+                    roleBadge.className = 'badge bg-secondary align-middle ms-2';
+                    
+                    // Скрываем кнопку админ панели
+                    const adminPanelBtn = document.querySelector('a[href*="admin-panel"]');
+                    if (adminPanelBtn) {
+                        adminPanelBtn.remove();
+                    }
+                }
+                
+                alert(data.message);
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка смены роли:', error);
+            alert('Ошибка при изменении роли');
+        });
     }
 }
 </script>

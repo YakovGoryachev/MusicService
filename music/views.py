@@ -585,6 +585,39 @@ def profile(request):
     return render(request, 'music/profile.html', context)
 
 
+@login_required
+@require_POST
+def toggle_admin_role(request):
+    """Переключение роли пользователя между обычным и администратором"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    
+    print(f"Toggle admin role request from user: {request.user.login}, current role: {request.user.role}")
+    
+    try:
+        # Переключаем роль
+        if request.user.role == 'admin':
+            request.user.role = 'user'
+            message = 'Роль изменена на пользователь'
+        else:
+            request.user.role = 'admin'
+            message = 'Роль изменена на администратор'
+        
+        request.user.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'new_role': request.user.role
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # API представления для AJAX
 @csrf_exempt
 @require_POST
@@ -904,6 +937,24 @@ def admin_generate_report(request):
         return redirect('music:admin_panel')
 
     fmt = request.GET.get('format', 'xlsx')
+    
+    # Импорты для генерации отчетов
+    try:
+        import openpyxl
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        messages.error(request, 'Требуется пакет openpyxl для генерации Excel. Установите его: pip install openpyxl')
+        return redirect('music:admin_reports')
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.fonts import addMapping
+    except ImportError:
+        messages.error(request, 'Требуется пакет reportlab для генерации PDF. Установите его: pip install reportlab')
+        return redirect('music:admin_reports')
 
     # === ОСНОВНАЯ СТАТИСТИКА ===
     total_users = User.objects.count()
@@ -982,12 +1033,6 @@ def admin_generate_report(request):
     ).order_by('-tracks_count')[:15]
 
     if fmt == 'xlsx':
-        try:
-            import openpyxl
-            from openpyxl.utils import get_column_letter
-        except Exception:
-            messages.error(request, 'Требуется пакет openpyxl для генерации Excel. Установите его: pip install openpyxl')
-            return redirect('music:admin_reports')
 
         wb = openpyxl.Workbook()
         
@@ -1127,15 +1172,6 @@ def admin_generate_report(request):
         return response
 
     elif fmt == 'pdf':
-        try:
-            from reportlab.lib.pagesizes import A4
-            from reportlab.pdfgen import canvas
-            from reportlab.pdfbase import pdfmetrics
-            from reportlab.pdfbase.ttfonts import TTFont
-            from reportlab.lib.fonts import addMapping
-        except Exception:
-            messages.error(request, 'Требуется пакет reportlab для генерации PDF. Установите его: pip install reportlab')
-            return redirect('music:admin_reports')
 
         # Настройка шрифтов для поддержки кириллицы
         try:

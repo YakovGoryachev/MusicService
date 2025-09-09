@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="container-fluid">
+    {% csrf_token %}
     <div class="row">
         <!-- Основной контент без боковой панели -->
         <main class="col-12 px-md-4">
