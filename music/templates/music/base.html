@@ -217,11 +217,11 @@
                             <i class="fas fa-user me-1"></i>Артисты
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a class="nav-link" href="{% url 'music:playlist_list' %}">
                             <i class="fas fa-playlist me-1"></i>Плейлисты
                         </a>
-                    </li>
+                    </li> -->
                     {% if user.is_authenticated and user.role == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'music:admin_panel' %}">

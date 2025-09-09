@@ -206,8 +206,6 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row mt-3">
                                 <div class="col-md-3 mb-3">
                                     <div class="card border-dark">
                                         <div class="card-body text-center">
@@ -216,6 +214,18 @@
                                             <p class="card-text small text-muted">Отправка email-уведомлений пользователям</p>
                                             <a href="{% url 'music:admin_send_email' %}" class="btn btn-dark btn-sm">
                                                 <i class="fas fa-paper-plane me-1"></i>Отправить
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card border-primary">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-chart-bar fa-2x text-primary mb-2"></i>
+                                            <h6 class="card-title">Отчёты</h6>
+                                            <p class="card-text small text-muted">Экспорт статистики в Excel и PDF</p>
+                                            <a href="{% url 'music:admin_reports' %}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-file-export me-1"></i>Открыть
                                             </a>
                                         </div>
                                     </div>

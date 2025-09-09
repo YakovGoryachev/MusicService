@@ -7,8 +7,8 @@
     <!-- Информация о группе -->
     <div class="row mb-5">
         <div class="col-lg-4 col-md-5 mb-4">
-            {% if group.photo_url %}
-                <img src="{{ group.photo_url }}" class="img-fluid rounded shadow" alt="{{ group.name }}">
+            {% if group.photo %}
+                <img src="{{ group.photo.url }}" class="img-fluid rounded shadow" alt="{{ group.name }}">
             {% else %}
                 <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
                     <i class="fas fa-users fa-5x text-white"></i>
@@ -26,89 +26,53 @@
                     {% endif %}
                 </div>
                 
-                <div class="text-end">
-                    <div class="mb-2">
-                        <span class="h4 text-warning">
-                            <i class="fas fa-star"></i> {{ group.average_rating|default:"0.0"|floatformat:1 }}
-                        </span>
-                        <small class="text-muted d-block">({{ group.ratings.count }} оценок)</small>
-                    </div>
-                    
-                    {% if user.is_authenticated %}
-                        <div class="rating-buttons mb-2">
-                            {% for i in "12345" %}
-                                <button class="btn btn-sm btn-outline-warning rating-btn" data-rating="{{ i }}" 
-                                        onclick="rateGroup('{{ group.pk }}', {{ i }})">
-                                    {{ i }}
-                                </button>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+                <div class="text-end"></div>
             </div>
             
             <div class="row mb-4">
                 <div class="col-md-6">
                     <p class="mb-2">
                         <i class="fas fa-compact-disc me-2"></i>
-                        <strong>Альбомов:</strong> {{ group.albums.count }}
+                        <strong>Альбомов:</strong> {{ albums|length }}
                     </p>
                     
                     <p class="mb-2">
                         <i class="fas fa-music me-2"></i>
-                        <strong>Треков:</strong> {{ group.tracks.count }}
+                        <strong>Треков:</strong> {{ tracks_count }}
                     </p>
                     
                     <p class="mb-2">
                         <i class="fas fa-play me-2"></i>
-                        <strong>Прослушиваний:</strong> {{ group.play_count|default:0 }}
+                        <strong>Прослушиваний:</strong> {{ total_play_count|default:0 }}
                     </p>
                 </div>
                 
                 <div class="col-md-6">
-                    {% if group.genres.all %}
-                        <p class="mb-2">
-                            <i class="fas fa-tags me-2"></i>
-                            <strong>Основные жанры:</strong>
-                        </p>
-                        <div class="mb-2">
-                            {% for genre in group.genres.all %}
-                                <span class="badge bg-primary me-1">{{ genre.name }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    <p class="mb-2">
+                        <i class="fas fa-user me-2"></i>
+                        <strong>Участники:</strong>
+                    </p>
+                    <div class="mb-2">
+                        {% for ag in artist_links %}
+                            <span class="badge bg-primary me-1">{{ ag.artist.name }}{% if ag.artist_role %} — {{ ag.artist_role }}{% endif %}</span>
+                        {% empty %}
+                            <span class="text-muted">Участники не указаны</span>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             
-            <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary btn-lg" onclick="playGroupTracks()">
-                    <i class="fas fa-play me-2"></i>Слушать все треки
-                </button>
-                
-                {% if user.is_authenticated %}
-                    <button class="btn btn-outline-primary" onclick="followGroup('{{ group.pk }}')">
-                        <i class="fas fa-heart me-2"></i>Подписаться
-                    </button>
-                    
-                    <button class="btn btn-outline-success" onclick="addGroupToPlaylist('{{ group.pk }}')">
-                        <i class="fas fa-plus me-2"></i>В плейлист
-                    </button>
-                    
-                    <button class="btn btn-outline-info" onclick="shareGroup()">
-                        <i class="fas fa-share me-2"></i>Поделиться
-                    </button>
-                {% endif %}
-            </div>
+            <div class="d-flex gap-2 flex-wrap"></div>
         </div>
     </div>
 
     <!-- Альбомы группы -->
-    {% if group.albums.all %}
+    {% if albums %}
         <div class="row mb-5">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3 class="h4">
-                        <i class="fas fa-compact-disc me-2"></i>Альбомы ({{ group.albums.count }})
+                        <i class="fas fa-compact-disc me-2"></i>Альбомы ({{ albums|length }})
                     </h3>
                     <a href="{% url 'music:album_list' %}?group={{ group.name }}" class="btn btn-outline-primary">
                         Все альбомы <i class="fas fa-arrow-right ms-1"></i>
@@ -116,11 +80,11 @@
                 </div>
                 
                 <div class="row">
-                    {% for album in group.albums.all %}
+                    {% for album in albums %}
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                             <div class="card h-100">
-                                {% if album.photo_url %}
-                                    <img src="{{ album.photo_url }}" class="card-img-top" alt="{{ album.name }}" style="height: 200px; object-fit: cover;">
+                                {% if album.photo %}
+                                    <img src="{{ album.photo.url }}" class="card-img-top" alt="{{ album.name }}" style="height: 200px; object-fit: cover;">
                                 {% else %}
                                     <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
                                         <i class="fas fa-compact-disc fa-3x text-white"></i>
@@ -159,12 +123,12 @@
     {% endif %}
 
     <!-- Популярные треки -->
-    {% if group.tracks.all %}
+    {% if tracks_count %}
         <div class="row mb-5">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3 class="h4">
-                        <i class="fas fa-music me-2"></i>Популярные треки ({{ group.tracks.count }})
+                        <i class="fas fa-music me-2"></i>Популярные треки ({{ tracks_count }})
                     </h3>
                     <a href="{% url 'music:track_list' %}?group={{ group.name }}" class="btn btn-outline-primary">
                         Все треки <i class="fas fa-arrow-right ms-1"></i>
@@ -186,7 +150,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for track in group.tracks.all|slice:":10" %}
+                                    {% for track in tracks|slice:":10" %}
                                         <tr>
                                             <td class="align-middle">{{ forloop.counter }}</td>
                                             <td class="align-middle">
@@ -320,8 +284,25 @@ function playGroupTracks() {
 }
 
 function playTrack(trackId) {
-    // Здесь можно добавить логику воспроизведения отдельного трека
-    alert('Воспроизведение трека');
+    // Получаем информацию о треке и воспроизводим его
+    fetch(`/music/api/track/${trackId}/play/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Создаем аудио элемент для воспроизведения
+                const audio = new Audio(data.file_url);
+                audio.play().catch(error => {
+                    console.error('Ошибка воспроизведения:', error);
+                    alert('Не удалось воспроизвести трек. Возможно, файл недоступен.');
+                });
+            } else {
+                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки трека:', error);
+            alert('Ошибка загрузки трека');
+        });
 }
 
 function rateGroup(groupId, rating) {
@@ -415,7 +396,16 @@ function addGroupTracksToPlaylist(groupId, playlistId) {
 function addTrackToPlaylist(trackId) {
     // Загружаем список плейлистов пользователя
     fetch(`/music/api/playlists/`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401) {
+                    alert('Необходимо войти в систему для добавления в плейлист');
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const playlistList = document.getElementById('playlistList');
             playlistList.innerHTML = '';

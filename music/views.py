@@ -225,12 +225,23 @@ def group_detail(request, pk):
     """Детальная страница группы"""
     group = get_object_or_404(Group, pk=pk)
     albums = group.album_set.all().order_by('-release_date')
-    artists = group.artist_set.all()
+    # Связь артиста и группы через ArtistGroup
+    artists = Artist.objects.filter(artistgroup__group=group).distinct()
+    artist_links = ArtistGroup.objects.filter(group=group).select_related('artist')
+    # Треки группы через альбомы этой группы
+    tracks_qs = Track.objects.filter(album__group=group).select_related('album').prefetch_related('genres', 'ratings').order_by('-play_count', '-id')
+    tracks_count = tracks_qs.count()
+    from django.db.models import Sum as _Sum
+    total_play_count = tracks_qs.aggregate(total=_Sum('play_count'))['total'] or 0
     
     context = {
         'group': group,
         'albums': albums,
         'artists': artists,
+        'artist_links': artist_links,
+        'tracks': tracks_qs,
+        'tracks_count': tracks_count,
+        'total_play_count': total_play_count,
     }
     return render(request, 'music/group_detail.html', context)
 
@@ -420,7 +431,7 @@ def rate_track(request, track_id):
             messages.error(request, 'Оценка должна быть от 1 до 5!')
     else:
         messages.error(request, 'Выберите оценку!')
-    
+            
     return redirect('music:track_detail', pk=track_id)
 
 
@@ -546,7 +557,7 @@ def api_rate_track(request, track_id):
         
         track = get_object_or_404(Track, pk=track_id)
         rating, created = TrackRating.objects.get_or_create(
-            user=request.user,
+                user=request.user,
             track=track,
             defaults={'value': rating_value}
         )
@@ -654,7 +665,37 @@ def api_get_playlists(request):
         return JsonResponse({'playlists': list(playlists)})
     
     except Exception as e:
+        print(f"Error in api_get_playlists: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def api_play_track(request, track_id):
+    """API для воспроизведения трека"""
+    try:
+        track = get_object_or_404(Track, pk=track_id)
+        
+        # Увеличиваем счетчик прослушиваний
+        track.play_count += 1
+        track.save()
+        
+        # Возвращаем URL файла для воспроизведения
+        if track.file:
+            return JsonResponse({
+                'success': True,
+                'file_url': track.file.url,
+                'track_name': track.name
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Файл трека недоступен'
+            })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @csrf_exempt
@@ -759,15 +800,39 @@ def admin_send_email(request):
             if user and user.email:
                 recipients = [user.email]
 
-        # Отправляем письма через EmailMessage (для dev режим печатаются в консоль)
+        # Отправляем письма через EmailMessage
         try:
+            sent_count = 0
+            failed_emails = []
+            
             for email in recipients:
-                msg = EmailMessage(subject=subject, body=message, to=[email])
-                msg.send(fail_silently=False)
+                try:
+                    msg = EmailMessage(
+                        subject=subject, 
+                        body=message, 
+                        from_email='yakov.goryachev@mail.ru',
+                        to=[email]
+                    )
+                    msg.send(fail_silently=False)
+                    sent_count += 1
+                    print(f"Email sent successfully to: {email}")
+                except Exception as email_error:
+                    print(f"Failed to send email to {email}: {str(email_error)}")
+                    failed_emails.append(email)
+                    continue
 
-            messages.success(request, f'Отправлено {len(recipients)} писем')
+            if sent_count > 0:
+                success_msg = f'Успешно отправлено {sent_count} писем'
+                if failed_emails:
+                    success_msg += f'. Не удалось отправить {len(failed_emails)} писем'
+                messages.success(request, success_msg)
+            else:
+                messages.error(request, 'Не удалось отправить ни одного письма')
+                
             return redirect('music:admin_panel')
+            
         except Exception as e:
+            print(f"Email sending error: {str(e)}")
             messages.error(request, f'Ошибка отправки: {str(e)}')
             return redirect('music:admin_send_email')
 
@@ -788,21 +853,88 @@ def admin_reports(request):
 
 @login_required
 def admin_generate_report(request):
-    """Generate Excel or PDF reports with top tracks/artists/albums and rating extremes."""
+    """Генерация расширенных отчетов с аналитикой"""
     if not request.user.role == 'admin':
         messages.error(request, 'Доступ запрещен. Требуются права администратора.')
         return redirect('music:admin_panel')
 
     fmt = request.GET.get('format', 'xlsx')
 
-    # Gather stats
-    top_tracks = Track.objects.annotate(cnt=Sum('play_count')).order_by('-cnt')[:20]
-    top_artists = Artist.objects.annotate(albums_count=Count('album')).order_by('-albums_count')[:20]
-    top_albums = Album.objects.annotate(cnt=Sum('play_count')).order_by('-cnt')[:20]
+    # === ОСНОВНАЯ СТАТИСТИКА ===
+    total_users = User.objects.count()
+    total_tracks = Track.objects.count()
+    total_albums = Album.objects.count()
+    total_artists = Artist.objects.count()
+    total_groups = Group.objects.count()
+    total_playlists = Playlist.objects.count()
+    total_comments = Comment.objects.count()
+    total_track_ratings = TrackRating.objects.count()
+    total_album_ratings = AlbumRating.objects.count()
+    total_genres = Genre.objects.count()
 
-    # Best and worst rated tracks
-    best_tracks = Track.objects.annotate(avg=Avg('ratings__value')).order_by('-avg')[:20]
-    worst_tracks = Track.objects.annotate(avg=Avg('ratings__value')).order_by('avg')[:20]
+    # === ПОПУЛЯРНОСТЬ ===
+    top_tracks = Track.objects.annotate(cnt=Sum('play_count')).order_by('-cnt')[:20]
+    # Для альбомов считаем сумму прослушиваний всех треков
+    top_albums = Album.objects.annotate(
+        total_plays=Sum('track__play_count')
+    ).filter(total_plays__isnull=False).order_by('-total_plays')[:20]
+    top_artists_by_albums = Artist.objects.annotate(albums_count=Count('album')).order_by('-albums_count')[:20]
+    top_groups_by_albums = Group.objects.annotate(albums_count=Count('album')).order_by('-albums_count')[:20]
+
+    # === РЕЙТИНГИ ===
+    best_tracks = Track.objects.annotate(avg=Avg('ratings__value')).filter(avg__isnull=False).order_by('-avg')[:20]
+    worst_tracks = Track.objects.annotate(avg=Avg('ratings__value')).filter(avg__isnull=False).order_by('avg')[:20]
+    best_albums = Album.objects.annotate(avg=Avg('ratings__value')).filter(avg__isnull=False).order_by('-avg')[:20]
+
+    # === ЖАНРОВАЯ АНАЛИТИКА ===
+    genre_stats = Genre.objects.annotate(
+        tracks_count=Count('track'),
+        avg_rating=Avg('track__ratings__value')
+    ).order_by('-tracks_count')[:15]
+
+    # === ПОЛЬЗОВАТЕЛЬСКАЯ АКТИВНОСТЬ ===
+    most_active_users = User.objects.annotate(
+        playlists_count=Count('playlists'),
+        comments_count=Count('comment'),
+        ratings_count=Count('trackrating') + Count('albumrating')
+    ).order_by('-playlists_count')[:15]
+
+    # === ВРЕМЕННАЯ АНАЛИТИКА ===
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Новые пользователи за последние 30 дней
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    new_users_30d = User.objects.filter(registration_date__gte=thirty_days_ago).count()
+    
+    # Новые плейлисты за последние 30 дней
+    new_playlists_30d = Playlist.objects.filter(creation_date__gte=thirty_days_ago).count()
+    
+    # Новые комментарии за последние 30 дней
+    new_comments_30d = Comment.objects.filter(created_at__gte=thirty_days_ago).count()
+
+    # === САМЫЕ ДЛИННЫЕ И КОРОТКИЕ ТРЕКИ ===
+    longest_tracks = Track.objects.filter(duration__isnull=False).order_by('-duration')[:10]
+    shortest_tracks = Track.objects.filter(duration__isnull=False).order_by('duration')[:10]
+
+    # === АЛЬБОМЫ ПО ГОДАМ ===
+    # Для SQLite используем strftime вместо EXTRACT
+    albums_by_year = Album.objects.filter(release_date__isnull=False).extra(
+        select={'year': "strftime('%Y', release_date)"}
+    ).values('year').annotate(count=Count('id')).order_by('-year')[:10]
+
+    # === САМЫЕ КОММЕНТИРУЕМЫЕ ТРЕКИ ===
+    most_commented_tracks = Track.objects.annotate(
+        comments_count=Count('comment')
+    ).filter(comments_count__gt=0).order_by('-comments_count')[:15]
+
+    # === СТАТИСТИКА ПО РОЛЯМ ПОЛЬЗОВАТЕЛЕЙ ===
+    users_by_role = User.objects.values('role').annotate(count=Count('id')).order_by('-count')
+
+    # === САМЫЕ ПОПУЛЯРНЫЕ ПЛЕЙЛИСТЫ ===
+    popular_playlists = Playlist.objects.annotate(
+        tracks_count=Count('tracks')
+    ).order_by('-tracks_count')[:15]
 
     if fmt == 'xlsx':
         try:
@@ -813,61 +945,332 @@ def admin_generate_report(request):
             return redirect('music:admin_reports')
 
         wb = openpyxl.Workbook()
+        
+        # === ОСНОВНАЯ СТАТИСТИКА ===
         ws = wb.active
-        ws.title = 'Top Tracks'
-        ws.append(['#','Track','Plays','Artist','Album'])
+        ws.title = 'Общая статистика'
+        ws.append(['Метрика', 'Значение'])
+        ws.append(['Пользователи', total_users])
+        ws.append(['Треки', total_tracks])
+        ws.append(['Альбомы', total_albums])
+        ws.append(['Артисты', total_artists])
+        ws.append(['Группы', total_groups])
+        ws.append(['Плейлисты', total_playlists])
+        ws.append(['Комментарии', total_comments])
+        ws.append(['Оценки треков', total_track_ratings])
+        ws.append(['Оценки альбомов', total_album_ratings])
+        ws.append(['Жанры', total_genres])
+        ws.append(['', ''])
+        ws.append(['=== АКТИВНОСТЬ ЗА 30 ДНЕЙ ===', ''])
+        ws.append(['Новые пользователи', new_users_30d])
+        ws.append(['Новые плейлисты', new_playlists_30d])
+        ws.append(['Новые комментарии', new_comments_30d])
+
+        # === ТОП ТРЕКОВ ПО ПРОСЛУШИВАНИЯМ ===
+        ws2 = wb.create_sheet('Топ треков по прослушиваниям')
+        ws2.append(['#', 'Название трека', 'Прослушивания', 'Альбом'])
         for i, t in enumerate(top_tracks, start=1):
-            ws.append([i, t.name, t.play_count or 0, t.album.artist.name if t.album and t.album.artist else '', t.album.name if t.album else ''])
+            album_name = t.album.name if t.album else 'Без альбома'
+            ws2.append([i, t.name, t.play_count or 0, album_name])
 
-        ws2 = wb.create_sheet('Top Artists')
-        ws2.append(['#','Artist','Albums'])
-        for i, a in enumerate(top_artists, start=1):
-            ws2.append([i, a.name, a.albums_count])
-
-        ws3 = wb.create_sheet('Top Albums')
-        ws3.append(['#','Album','Plays','Artist'])
+        # === ТОП АЛЬБОМОВ ПО ПРОСЛУШИВАНИЯМ ===
+        ws3 = wb.create_sheet('Топ альбомов по прослушиваниям')
+        ws3.append(['#', 'Название альбома', 'Прослушивания', 'Группа/Артист'])
         for i, a in enumerate(top_albums, start=1):
-            ws3.append([i, a.name, a.play_count or 0, a.artist.name if a.artist else ''])
+            artist_name = a.group.name if a.group else (a.artist.name if a.artist else 'Неизвестно')
+            ws3.append([i, a.name, a.total_plays or 0, artist_name])
 
-        ws4 = wb.create_sheet('Best Tracks')
-        ws4.append(['#','Track','AvgRating'])
+        # === ТОП АРТИСТОВ ПО КОЛИЧЕСТВУ АЛЬБОМОВ ===
+        ws4 = wb.create_sheet('Топ артистов по альбомам')
+        ws4.append(['#', 'Имя артиста', 'Количество альбомов'])
+        for i, a in enumerate(top_artists_by_albums, start=1):
+            ws4.append([i, a.name, a.albums_count])
+
+        # === ТОП ГРУПП ПО КОЛИЧЕСТВУ АЛЬБОМОВ ===
+        ws5 = wb.create_sheet('Топ групп по альбомам')
+        ws5.append(['#', 'Название группы', 'Количество альбомов'])
+        for i, g in enumerate(top_groups_by_albums, start=1):
+            ws5.append([i, g.name, g.albums_count])
+
+        # === ЛУЧШИЕ ТРЕКИ ПО РЕЙТИНГУ ===
+        ws6 = wb.create_sheet('Лучшие треки по рейтингу')
+        ws6.append(['#', 'Название трека', 'Средний рейтинг', 'Количество оценок'])
         for i, t in enumerate(best_tracks, start=1):
-            ws4.append([i, t.name, round(t.avg or 0,2)])
+            rating_count = t.ratings.count()
+            ws6.append([i, t.name, round(t.avg, 2), rating_count])
 
-        ws5 = wb.create_sheet('Worst Tracks')
-        ws5.append(['#','Track','AvgRating'])
+        # === ХУДШИЕ ТРЕКИ ПО РЕЙТИНГУ ===
+        ws7 = wb.create_sheet('Худшие треки по рейтингу')
+        ws7.append(['#', 'Название трека', 'Средний рейтинг', 'Количество оценок'])
         for i, t in enumerate(worst_tracks, start=1):
-            ws5.append([i, t.name, round(t.avg or 0,2)])
+            rating_count = t.ratings.count()
+            ws7.append([i, t.name, round(t.avg, 2), rating_count])
+
+        # === ЛУЧШИЕ АЛЬБОМЫ ПО РЕЙТИНГУ ===
+        ws8 = wb.create_sheet('Лучшие альбомы по рейтингу')
+        ws8.append(['#', 'Название альбома', 'Средний рейтинг', 'Количество оценок'])
+        for i, a in enumerate(best_albums, start=1):
+            rating_count = a.ratings.count()
+            ws8.append([i, a.name, round(a.avg, 2), rating_count])
+
+        # === ЖАНРОВАЯ СТАТИСТИКА ===
+        ws9 = wb.create_sheet('Статистика по жанрам')
+        ws9.append(['#', 'Жанр', 'Количество треков', 'Средний рейтинг'])
+        for i, g in enumerate(genre_stats, start=1):
+            avg_rating = round(g.avg_rating, 2) if g.avg_rating else 0
+            ws9.append([i, g.name, g.tracks_count, avg_rating])
+
+        # === САМЫЕ АКТИВНЫЕ ПОЛЬЗОВАТЕЛИ ===
+        ws10 = wb.create_sheet('Самые активные пользователи')
+        ws10.append(['#', 'Пользователь', 'Плейлисты', 'Комментарии', 'Оценки'])
+        for i, u in enumerate(most_active_users, start=1):
+            ws10.append([i, u.login, u.playlists_count, u.comments_count, u.ratings_count])
+
+        # === САМЫЕ ДЛИННЫЕ ТРЕКИ ===
+        ws11 = wb.create_sheet('Самые длинные треки')
+        ws11.append(['#', 'Название трека', 'Длительность (мин:сек)', 'Альбом'])
+        for i, t in enumerate(longest_tracks, start=1):
+            duration_min = t.duration // 60
+            duration_sec = t.duration % 60
+            duration_str = f"{duration_min}:{duration_sec:02d}"
+            album_name = t.album.name if t.album else 'Без альбома'
+            ws11.append([i, t.name, duration_str, album_name])
+
+        # === САМЫЕ КОРОТКИЕ ТРЕКИ ===
+        ws12 = wb.create_sheet('Самые короткие треки')
+        ws12.append(['#', 'Название трека', 'Длительность (мин:сек)', 'Альбом'])
+        for i, t in enumerate(shortest_tracks, start=1):
+            duration_min = t.duration // 60
+            duration_sec = t.duration % 60
+            duration_str = f"{duration_min}:{duration_sec:02d}"
+            album_name = t.album.name if t.album else 'Без альбома'
+            ws12.append([i, t.name, duration_str, album_name])
+
+        # === АЛЬБОМЫ ПО ГОДАМ ===
+        ws13 = wb.create_sheet('Альбомы по годам')
+        ws13.append(['Год', 'Количество альбомов'])
+        for year_data in albums_by_year:
+            ws13.append([int(year_data['year']), year_data['count']])
+
+        # === САМЫЕ КОММЕНТИРУЕМЫЕ ТРЕКИ ===
+        ws14 = wb.create_sheet('Самые комментируемые треки')
+        ws14.append(['#', 'Название трека', 'Количество комментариев', 'Альбом'])
+        for i, t in enumerate(most_commented_tracks, start=1):
+            album_name = t.album.name if t.album else 'Без альбома'
+            ws14.append([i, t.name, t.comments_count, album_name])
+
+        # === СТАТИСТИКА ПО РОЛЯМ ===
+        ws15 = wb.create_sheet('Пользователи по ролям')
+        ws15.append(['Роль', 'Количество'])
+        for role_data in users_by_role:
+            role_name = {'user': 'Пользователь', 'admin': 'Администратор', 'moderator': 'Модератор'}.get(role_data['role'], role_data['role'])
+            ws15.append([role_name, role_data['count']])
+
+        # === ПОПУЛЯРНЫЕ ПЛЕЙЛИСТЫ ===
+        ws16 = wb.create_sheet('Популярные плейлисты')
+        ws16.append(['#', 'Название плейлиста', 'Количество треков', 'Владелец', 'Публичный'])
+        for i, p in enumerate(popular_playlists, start=1):
+            is_public = 'Да' if p.is_public else 'Нет'
+            ws16.append([i, p.name, p.tracks_count, p.user.login, is_public])
 
         out = io.BytesIO()
         wb.save(out)
         out.seek(0)
 
         response = HttpResponse(out.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="music_report.xlsx"'
+        response['Content-Disposition'] = 'attachment; filename="music_advanced_report.xlsx"'
         return response
 
     elif fmt == 'pdf':
         try:
             from reportlab.lib.pagesizes import A4
             from reportlab.pdfgen import canvas
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            from reportlab.lib.fonts import addMapping
         except Exception:
             messages.error(request, 'Требуется пакет reportlab для генерации PDF. Установите его: pip install reportlab')
             return redirect('music:admin_reports')
+
+        # Настройка шрифтов для поддержки кириллицы
+        try:
+            # Попробуем использовать системный шрифт Arial
+            pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
+            pdfmetrics.registerFont(TTFont('Arial-Bold', 'arialbd.ttf'))
+            font_name = 'Arial'
+            font_bold = 'Arial-Bold'
+        except:
+            # Fallback на встроенные шрифты ReportLab с поддержкой Unicode
+            font_name = 'Helvetica'
+            font_bold = 'Helvetica-Bold'
+        
+        # Функция для безопасного отображения текста
+        def safe_text(text):
+            if text is None:
+                return ""
+            # Заменяем проблемные символы на безопасные
+            return str(text).encode('utf-8', 'replace').decode('utf-8', 'replace')
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
         y = height - 40
-        c.setFont('Helvetica-Bold', 14)
+        c.setFont(font_bold, 14)
         c.drawString(40, y, 'Music Service - Report')
         y -= 30
-        c.setFont('Helvetica-Bold', 12)
-        c.drawString(40, y, 'Top Tracks')
+        # Summary
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Общая статистика')
         y -= 20
-        c.setFont('Helvetica', 10)
-        for i, t in enumerate(top_tracks[:20], start=1):
-            line = f"{i}. {t.name} — plays: {t.play_count or 0}"
+        c.setFont(font_name, 10)
+        for label, value in [
+            ('Пользователи', total_users),
+            ('Треки', total_tracks),
+            ('Альбомы', total_albums),
+            ('Артисты', total_artists),
+            ('Группы', total_groups),
+            ('Плейлисты', total_playlists),
+            ('Комментарии', total_comments),
+            ('Оценки треков', total_track_ratings),
+            ('Оценки альбомов', total_album_ratings),
+            ('Жанры', total_genres),
+        ]:
+            c.drawString(40, y, f"{label}: {value}")
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Активность за 30 дней
+        if y < 100:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Активность за 30 дней')
+        y -= 20
+        c.setFont(font_name, 10)
+        for label, value in [
+            ('Новые пользователи', new_users_30d),
+            ('Новые плейлисты', new_playlists_30d),
+            ('Новые комментарии', new_comments_30d),
+        ]:
+            c.drawString(40, y, f"{label}: {value}")
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Top Tracks by plays
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Топ треков по прослушиваниям')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, t in enumerate(top_tracks[:15], start=1):
+            line = f"{i}. {safe_text(t.name)} — {t.play_count or 0} прослушиваний"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Best Tracks by rating
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Лучшие треки по рейтингу')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, t in enumerate(best_tracks[:15], start=1):
+            rating_count = t.ratings.count()
+            line = f"{i}. {safe_text(t.name)} — {round(t.avg, 2)} ({rating_count} оценок)"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Top Albums by plays
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Топ альбомов по прослушиваниям')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, a in enumerate(top_albums[:15], start=1):
+            line = f"{i}. {safe_text(a.name)} — {a.total_plays or 0} прослушиваний"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Genre Statistics
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Статистика по жанрам')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, g in enumerate(genre_stats[:10], start=1):
+            avg_rating = round(g.avg_rating, 2) if g.avg_rating else 0
+            line = f"{i}. {safe_text(g.name)} — {g.tracks_count} треков, рейтинг: {avg_rating}"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Most Active Users
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Самые активные пользователи')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, u in enumerate(most_active_users[:10], start=1):
+            line = f"{i}. {safe_text(u.login)} — {u.playlists_count} плейлистов, {u.comments_count} комментариев"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Longest Tracks
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Самые длинные треки')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, t in enumerate(longest_tracks[:10], start=1):
+            duration_min = t.duration // 60
+            duration_sec = t.duration % 60
+            duration_str = f"{duration_min}:{duration_sec:02d}"
+            line = f"{i}. {safe_text(t.name)} — {duration_str}"
+            c.drawString(40, y, line)
+            y -= 14
+            if y < 80:
+                c.showPage()
+                y = height - 40
+
+        # Most Commented Tracks
+        if y < 140:
+            c.showPage()
+            y = height - 40
+        c.setFont(font_bold, 12)
+        c.drawString(40, y, 'Самые комментируемые треки')
+        y -= 20
+        c.setFont(font_name, 10)
+        for i, t in enumerate(most_commented_tracks[:10], start=1):
+            line = f"{i}. {safe_text(t.name)} — {t.comments_count} комментариев"
             c.drawString(40, y, line)
             y -= 14
             if y < 80:
@@ -877,7 +1280,11 @@ def admin_generate_report(request):
         c.showPage()
         c.save()
         buffer.seek(0)
-        return HttpResponse(buffer, content_type='application/pdf')
+        
+        # Создаем HttpResponse с правильными заголовками для скачивания
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="music_service_report.pdf"'
+        return response
 
     else:
         messages.error(request, 'Неподдерживаемый формат')
@@ -1409,6 +1816,9 @@ def admin_edit_group(request, group_id):
         name = request.POST.get('name')
         description = request.POST.get('description')
         photo = request.FILES.get('photo')
+        # Динамические участники (массивы синхронные)
+        participant_artists = request.POST.getlist('participant_artist')
+        participant_roles = request.POST.getlist('participant_role')
         
         if name:
             try:
@@ -1420,6 +1830,17 @@ def admin_edit_group(request, group_id):
                     group.photo = photo
                 
                 group.save()
+
+                # Обновляем участников группы через ArtistGroup
+                ArtistGroup.objects.filter(group=group).delete()
+                for aid, role in zip(participant_artists, participant_roles):
+                    if not aid:
+                        continue
+                    try:
+                        artist_obj = Artist.objects.get(pk=aid)
+                        ArtistGroup.objects.create(group=group, artist=artist_obj, artist_role=(role or ''))
+                    except Artist.DoesNotExist:
+                        continue
                 
                 messages.success(request, f'Группа "{name}" успешно обновлена!')
                 return redirect('music:admin_groups')
@@ -1428,8 +1849,14 @@ def admin_edit_group(request, group_id):
         else:
             messages.error(request, 'Заполните все обязательные поля!')
     
+    # Данные для формы участников
+    artists = Artist.objects.all().order_by('name')
+    artist_links = ArtistGroup.objects.filter(group=group).select_related('artist').order_by('artist__name')
+
     context = {
         'group': group,
+        'artists': artists,
+        'artist_links': artist_links,
     }
     return render(request, 'music/admin/admin_edit_group.html', context)
 

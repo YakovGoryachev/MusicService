@@ -149,7 +149,18 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# Simple email settings for development
+# Email settings for SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.mail.ru'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'yakov.goryachev@mail.ru'
+EMAIL_HOST_PASSWORD = 'hxQ4fma0IXSQJ7L2erXr'
+DEFAULT_FROM_EMAIL = 'yakov.goryachev@mail.ru'
+SERVER_EMAIL = 'yakov.goryachev@mail.ru'
+
+# Fallback for development (console backend)
 if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'no-reply@example.com'
+    # Uncomment the line below to use console backend for testing
+    # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    pass

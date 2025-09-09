@@ -34,6 +34,54 @@
                                     <textarea class="form-control" id="description" name="description" rows="4" placeholder="Расскажите о группе...">{{ group.description }}</textarea>
                                     <div class="form-text">Краткое описание группы (необязательно)</div>
                                 </div>
+
+                                <!-- Участники группы -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-user me-2"></i>Участники группы
+                                    </label>
+
+                                    <div id="participants-list" class="border rounded p-2">
+                                        {% for ag in artist_links %}
+                                        <div class="row g-2 align-items-center participant-row mb-2">
+                                            <div class="col-md-6">
+                                                <select name="participant_artist" class="form-select">
+                                                    <option value="">— Выбрать артиста —</option>
+                                                    {% for artist in artists %}
+                                                        <option value="{{ artist.id }}" {% if artist.id == ag.artist.id %}selected{% endif %}>{{ artist.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" name="participant_role" class="form-control" placeholder="Роль (необязательно)" value="{{ ag.artist_role }}">
+                                            </div>
+                                            <div class="col-md-1 text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeParticipantRow(this)"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        {% empty %}
+                                        <div class="row g-2 align-items-center participant-row mb-2">
+                                            <div class="col-md-6">
+                                                <select name="participant_artist" class="form-select">
+                                                    <option value="">— Выбрать артиста —</option>
+                                                    {% for artist in artists %}
+                                                        <option value="{{ artist.id }}">{{ artist.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" name="participant_role" class="form-control" placeholder="Роль (необязательно)">
+                                            </div>
+                                            <div class="col-md-1 text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeParticipantRow(this)"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addParticipantRow()"><i class="fas fa-plus me-1"></i>Добавить участника</button>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div class="col-md-4">
@@ -120,4 +168,33 @@
     border-color: #6b6d7d;
 }
 </style>
+<script>
+function addParticipantRow() {
+    const list = document.getElementById('participants-list');
+    const row = document.createElement('div');
+    row.className = 'row g-2 align-items-center participant-row mb-2';
+    row.innerHTML = `
+        <div class="col-md-6">
+            <select name="participant_artist" class="form-select">
+                <option value="">— Выбрать артиста —</option>
+                {% for artist in artists %}
+                    <option value="{{ artist.id }}">{{ artist.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <input type="text" name="participant_role" class="form-control" placeholder="Роль (необязательно)">
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeParticipantRow(this)"><i class="fas fa-trash"></i></button>
+        </div>
+    `;
+    list.appendChild(row);
+}
+
+function removeParticipantRow(btn) {
+    const row = btn.closest('.participant-row');
+    if (row) row.remove();
+}
+</script>
 {% endblock %}

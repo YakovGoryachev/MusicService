@@ -52,6 +52,7 @@ urlpatterns = [
     path('api/playlists/', views.api_get_playlists, name='api_get_playlists'),
     path('api/playlists/<uuid:playlist_id>/add-track/', views.api_add_track_to_playlist, name='api_add_track_to_playlist'),
     path('api/playlists/<uuid:playlist_id>/remove-track/', views.api_remove_track_from_playlist, name='api_remove_track_from_playlist'),
+    path('api/track/<uuid:track_id>/play/', views.api_play_track, name='api_play_track'),
     
     # Админ панель
     path('admin-panel/', views.admin_panel, name='admin_panel'),
